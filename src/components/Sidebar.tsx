@@ -25,10 +25,6 @@ export default function Sidebar() {
       defaultSelectedKeys={selectedKeys}
       selectedKeys={selectedKeys}
       onSelect={({ itemKey }) => navigate(`/${itemKey}`)}
-      header={{
-        text: 'Token Proxy',
-        style: { fontSize: 18, fontWeight: 600 },
-      }}
       items={items}
       style={{ height: '100%' }}
     />

@@ -12,9 +12,10 @@
   "app": {
     "windows": [
       {
-        "title": "token-proxy",
+        "title": "Token Proxy",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "decorations": false
       }
     ],
     "security": {

@@ -63,7 +63,7 @@ src-tauri/src/
 src/
 ├── types/          # TypeScript 类型定义
 ├── services/       # Tauri IPC invoke 封装
-├── components/     # 可复用组件 (Layout, Sidebar, StatusBar)
+├── components/     # 可复用组件 (Layout, Sidebar, StatusBar, TitleBar)
 ├── pages/          # 页面组件
 │   ├── ServicesPage
 │   ├── AccessPointsPage
@@ -82,6 +82,8 @@ src/
 3. **透明代理**: 匹配接入点路径 -> 注入 API Key -> 透传到远程服务
 4. **请求日志**: 记录代理转发元数据，可选完整请求/响应内容
 5. **配置热重载**: YAML 文件变更后通过 notify 自动加载
+6. **单实例限制**: 使用 `tauri-plugin-single-instance` 限制应用多开，二次启动时聚焦已有窗口
+7. **系统托盘与窗口管理**: 托盘区右键菜单 (显示窗口/退出)，关闭窗口最小化到托盘而非退出
 
 ## Tauri IPC 命令一览
 
@@ -105,6 +107,9 @@ src/
 - **管理后台鉴权**: 无需登录 (桌面应用 OS 级安全)
 - **协议支持**: Anthropic Messages API + OpenAI-Compatible 格式
 - **配置目录**: OS 默认配置目录 (`dirs::config_dir()`)
+- **窗口装饰**: 使用自定义标题栏 (TitleBar) 替代系统原生标题栏，通过设置 `decorations: false` 启用无边框窗口。标题栏左侧显示应用名称，中部为拖拽区域，右侧提供最小化、最大化/还原、关闭按钮
+- **窗口关闭行为**: 关闭窗口时最小化到系统托盘，完全退出通过托盘菜单「退出」
+- **单实例方案**: 使用 `tauri-plugin-single-instance` 插件实现单实例限制，二次启动时聚焦已有窗口
 
 ## 命令
 

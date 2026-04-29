@@ -14,12 +14,15 @@ graph TB
         subgraph WEBVIEW["Tauri 桌面窗口 (WebView)"]
             REACT["React SPA<br/>TypeScript + Semi Design"]
             TYPES["types/"] --- SRV["services/"]
-            COMP["components/"] --- PAGES["pages/"]
+            COMP["components/<br/>Layout / Sidebar / StatusBar / TitleBar"] --- PAGES["pages/"]
             IPC_PROTO["通信: Tauri IPC (invoke)"]
         end
     end
 
     subgraph BRIDGE["Tauri 桥接层"]
+        SYSTRAY["系统托盘<br/>托盘图标 + 右键菜单<br/>(显示窗口 / 退出)"]
+        SINGLE_INSTANCE["单实例限制<br/>tauri-plugin-single-instance<br/>二次启动时聚焦已有窗口"]
+        WINDOW_CTRL["窗口控制<br/>自定义标题栏: 最小化 / 最大化还原 / 关闭到托盘<br/>CloseRequested → hide()<br/>data-tauri-drag-region 拖拽"]
         COMMANDS["20 个 #[tauri::command] 函数<br/>AppStateManaged 托管状态"]
     end
 
@@ -71,6 +74,7 @@ graph TB
 | 时间处理 | chrono | 0.4 | 时间戳 |
 | 配置目录 | dirs | 5 | OS 配置路径解析 |
 | CORS | tower-http | 0.5 | 跨域支持 |
+| 单实例 | tauri-plugin-single-instance | 2 | 限制应用多开 |
 
 ## DDD 四层架构详解
 
@@ -179,12 +183,12 @@ API 服务的完整 CRUD 管理。
 
 #### ProxyService
 
-代理服务器 (Axum) 的生命周期管理。
+代理服务器 (Axum) 的生命周期管理，新增 `running: AtomicBool` 字段追踪真实运行状态。
 
-- `start` — 在指定端口启动 Axum HTTP 服务器
-- `stop` — 通过 oneshot channel 发送关闭信号
-- `restart` — 停止旧服务器并在新端口启动
-- `get_status` — 获取当前运行状态
+- `start` — 在指定端口启动 Axum HTTP 服务器，启动后 `running` 置 true
+- `stop` — 通过 oneshot channel 发送关闭信号，`running` 置 false
+- `restart` — 停止旧服务器并在新端口启动，启动后 `running` 置 true
+- `get_status` — 返回真实 `running` 值而非端口状态推断
 
 #### LogService
 
@@ -313,8 +317,9 @@ src/
 │   ├── proxy-log.ts       # 3 个 Log IPC 封装
 │   └── config.ts          # 6 个 Config/Proxy IPC 封装
 ├── components/            # 可复用组件
-│   ├── Layout.tsx         # 布局容器 (Sidebar + Content + StatusBar)
-│   ├── Sidebar.tsx        # 导航侧边栏
+│   ├── TitleBar.tsx       # 自定义标题栏 (decorations: false 替代原生标题栏)
+│   ├── Layout.tsx         # 布局容器 (TitleBar + Sidebar + Content + StatusBar)
+│   ├── Sidebar.tsx        # 导航侧边栏 (纯菜单)
 │   └── StatusBar.tsx      # 代理状态栏
 └── pages/                 # 业务页面
     ├── ServicesPage.tsx   # API 服务管理页面
@@ -408,22 +413,32 @@ sequenceDiagram
 
 ## 初始化流程
 
-应用启动时序 (`lib.rs` setup):
+应用启动时序 (`lib.rs` `run()`):
 
 ```
-1. 解析配置目录 (dirs::config_dir/token-proxy/config.yaml)
-2. 初始化 YamlConfigRepository
-3. 读取初始 YAML 配置，提取 proxy_port
-4. 创建共享内存状态: Arc<RwLock<Vec<ApiService>>>
-                               Arc<RwLock<Vec<AccessPoint>>>
-5. 初始化 SQLite: SqliteRepository (token-proxy.db)
-6. 创建配置变更通知 channel (watch::channel)
-7. 启动 notify 文件监听器 (热重载)
-8. 创建应用层服务 (ServiceManagement, AccessPointManagement,
-   ProxyService, LogService, ConfigService)
-9. 启动 Axum 代理服务器
-10. 启动定时日志清理任务 (每小时)
-11. 注册托管状态到 Tauri App
+0. 注册基础插件 (tauri-plugin-opener)
+0a. 注册单实例插件 (tauri-plugin-single-instance)，注册回调：
+    二次启动时 unminimize + show + set_focus 已有窗口
+1. setup 闭包: 创建托盘图标 (TrayIconBuilder)
+   - 右键菜单: 显示窗口 / 退出
+   - 左键点击: 显示窗口
+   - 退出菜单项: 先 stop 代理服务, 再 app.exit(0)
+2. setup 内异步启动:
+   2.1. 解析配置目录 (dirs::config_dir/token-proxy/config.yaml)
+   2.2. 初始化 YamlConfigRepository
+   2.3. 读取初始 YAML 配置，提取 proxy_port
+   2.4. 创建共享内存状态: Arc<RwLock<Vec<ApiService>>>
+                                 Arc<RwLock<Vec<AccessPoint>>>
+   2.5. 初始化 SQLite: SqliteRepository (token-proxy.db)
+   2.6. 创建配置变更通知 channel (watch::channel)
+   2.7. 启动 notify 文件监听器 (热重载)
+   2.8. 创建应用层服务 (ServiceManagement, AccessPointManagement,
+        ProxyService, LogService, ConfigService)
+   2.9. 启动 Axum 代理服务器
+   2.10. 启动定时日志清理任务 (每小时)
+   2.11. 注册托管状态到 Tauri App
+3. on_window_event: 拦截 CloseRequested → window.hide() 隐藏到托盘
+4. invoke_handler 注册所有 IPC 命令
 ```
 
 ## 关键技术决策
@@ -453,8 +468,37 @@ sequenceDiagram
 
 使用 Tauri IPC (invoke) 而非 HTTP REST，这是桌面应用的原生通信方式，安全性更高、延迟更低。
 
+### 单实例限制策略
+
+使用 `tauri-plugin-single-instance` 官方插件实现单实例限制。二次启动时，插件回调自动将已有窗口 `unminimize` + `show` + `set_focus`，确保用户感知到正在运行的实例。此方案无需额外的 PID 文件或锁文件，与 Tauri 生命周期深度集成。
+
+### 隐藏到托盘设计
+
+关闭窗口时 (`CloseRequested` 事件) 不退出应用，而是调用 `window.hide()` 将窗口隐藏到系统托盘。这种设计符合桌面工具类应用的通行做法，避免误关闭导致代理中断。用户通过托盘图标右键菜单「退出」或左键点击「显示窗口」控制应用生命周期。
+
+### 优雅退出流程
+
+托盘「退出」菜单项的执行顺序：先调用 `ProxyService.stop()` 停止代理服务器，再调用 `app.exit(0)` 退出应用。确保退出时不会残留后台代理进程，端口及时释放。
+
+### 自定义标题栏设计
+
+替换 Tauri 默认原生标题栏为 React 自定义标题栏，实现统一的跨平台视觉效果。
+
+- **配置**：`tauri.conf.json` 中设置 `"decorations": false`，禁用原生窗口装饰
+- **拖拽区域**：使用 `data-tauri-drag-region` HTML 属性标记标题栏中间区域为可拖拽区域，用户可通过拖拽移动窗口位置
+- **窗口控制按钮**：TitleBar 组件右侧提供三个按钮：
+  - **最小化**：调用 `getCurrentWindow().minimize()` 将窗口最小化到任务栏
+  - **最大化/还原**：调用 `getCurrentWindow().toggleMaximize()` 切换最大化状态，通过 `isMaximized()` + `onResized` 事件同步按钮图标
+  - **关闭到托盘**：调用 `getCurrentWindow().hide()` 将窗口隐藏到系统托盘，与 Rust 端 `CloseRequested` 拦截行为一致
+- **布局变更**：Layout 容器外层改为 `column` 方向，顶部插入 TitleBar，下方保留原有 `Sidebar + Content + StatusBar` 的 `row` 布局
+- **Sidebar 简化**：移除 Nav 组件的 header 标题 "Token Proxy"，移入 TitleBar 左侧展示
+- **权限**：Capabilities 中新增 `window.allowMinimize` / `window.allowToggleMaximize` / `window.allowIsMaximized` 三个权限
+- **后端无变更**：所有标题栏逻辑在前端实现，Rust 后端不受影响
+
 ## 变更记录
 
 | 日期 | 变更内容 | 说明 |
 |------|----------|------|
 | 2026-04-28 | 初始架构文档创建 | 记录 DDD 四层架构、核心数据流和关键技术决策 |
+| 2026-04-29 | 补充单实例和系统托盘 | 新增单实例限制、系统托盘功能、ProxyService 状态追踪、隐藏到托盘关闭策略 |
+| 2026-04-29 | 自定义标题栏 | 替换原生标题栏为 TitleBar React 组件，支持最小化/最大化还原/关闭到托盘，data-tauri-drag-region 拖拽 |
