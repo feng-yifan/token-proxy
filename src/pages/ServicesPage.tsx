@@ -1,14 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Table,
-  Button,
-  Modal,
-  Form,
-  Toast,
-  Popconfirm,
-} from '@douyinfe/semi-ui';
+import { Table, Button, Toast, Popconfirm } from '@douyinfe/semi-ui';
 import { IconPlus, IconEdit, IconDelete } from '@douyinfe/semi-icons';
-import { listServices, createService, updateService, deleteService } from '../services';
+import { listServices, deleteService } from '../services';
+import ServiceModal from '../components/ServiceModal';
 import type { ApiService } from '../types';
 
 export default function ServicesPage() {
@@ -16,7 +10,6 @@ export default function ServicesPage() {
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingService, setEditingService] = useState<ApiService | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   const fetchServices = useCallback(async () => {
     setLoading(true);
@@ -54,32 +47,8 @@ export default function ServicesPage() {
     }
   };
 
-  const handleSubmit = async (values: Record<string, unknown>) => {
-    setSubmitting(true);
-    try {
-      if (editingService) {
-        await updateService({
-          id: editingService.id,
-          name: values.name as string,
-          base_url: values.base_url as string,
-          api_key: values.api_key as string,
-        });
-        Toast.success('服务已更新');
-      } else {
-        await createService({
-          name: values.name as string,
-          base_url: values.base_url as string,
-          api_key: values.api_key as string,
-        });
-        Toast.success('服务已创建');
-      }
-      setModalVisible(false);
-      fetchServices();
-    } catch (error) {
-      Toast.error(`保存失败: ${error}`);
-    } finally {
-      setSubmitting(false);
-    }
+  const handleModalClose = () => {
+    setModalVisible(false);
   };
 
   const columns = [
@@ -107,6 +76,7 @@ export default function ServicesPage() {
           <Popconfirm
             title="确认删除"
             content="确定要删除此服务吗？此操作不可撤销。"
+            position="bottomRight"
             onConfirm={() => handleDelete(record.id)}
           >
             <Button icon={<IconDelete />} size="small" type="danger">
@@ -143,59 +113,12 @@ export default function ServicesPage() {
         empty="暂无服务数据"
       />
 
-      <Modal
-        title={editingService ? '编辑服务' : '添加服务'}
+      <ServiceModal
         visible={modalVisible}
-        onCancel={() => setModalVisible(false)}
-        footer={null}
-        width={520}
-      >
-        <Form
-          onSubmit={handleSubmit}
-          initValues={
-            editingService
-              ? {
-                  name: editingService.name,
-                  base_url: editingService.base_url,
-                  api_key: editingService.api_key,
-                }
-              : undefined
-          }
-        >
-          <Form.Input
-            field="name"
-            label="名称"
-            placeholder="请输入服务名称"
-            rules={[{ required: true, message: '请输入服务名称' }]}
-          />
-          <Form.Input
-            field="base_url"
-            label="Base URL"
-            placeholder="https://api.example.com"
-            rules={[{ required: true, message: '请输入 Base URL' }]}
-          />
-          <Form.Input
-            field="api_key"
-            label="API Key"
-            placeholder="请输入 API Key"
-            mode="password"
-            rules={[{ required: true, message: '请输入 API Key' }]}
-          />
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: 8,
-              marginTop: 24,
-            }}
-          >
-            <Button onClick={() => setModalVisible(false)}>取消</Button>
-            <Button type="primary" htmlType="submit" loading={submitting}>
-              {editingService ? '更新' : '创建'}
-            </Button>
-          </div>
-        </Form>
-      </Modal>
+        editingService={editingService}
+        onClose={handleModalClose}
+        onSuccess={fetchServices}
+      />
     </div>
   );
 }

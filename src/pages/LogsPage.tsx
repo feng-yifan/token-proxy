@@ -150,6 +150,7 @@ export default function LogsPage() {
           <Popconfirm
             title="确认清空"
             content="确定要清空所有日志吗？此操作不可撤销。"
+            position="bottomRight"
             onConfirm={handleClear}
           >
             <Button icon={<IconClear />} type="danger">
