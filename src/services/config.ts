@@ -34,11 +34,11 @@ export async function updateLogSettings(
   }
 }
 
-export async function updateAdminKey(key: string): Promise<void> {
+export async function updateAppTheme(theme: string): Promise<void> {
   try {
-    await invoke('update_admin_key', { key });
+    await invoke('update_app_theme', { theme });
   } catch (error) {
-    console.error('Failed to update admin key:', error);
+    console.error('Failed to update app theme:', error);
     throw error;
   }
 }

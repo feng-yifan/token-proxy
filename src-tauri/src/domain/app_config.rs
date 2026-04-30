@@ -21,7 +21,8 @@ impl Default for LogSettings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     pub proxy_port: u16,
-    pub admin_key: String,
+    #[serde(default = "default_app_theme")]
+    pub app_theme: String,
     pub services: Vec<ApiService>,
     pub access_points: Vec<AccessPoint>,
     pub log_settings: LogSettings,
@@ -31,7 +32,7 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             proxy_port: 9876,
-            admin_key: String::new(),
+            app_theme: String::from("system"),
             services: vec![],
             access_points: vec![],
             log_settings: LogSettings::default(),
@@ -43,4 +44,8 @@ impl Default for AppConfig {
 pub struct ProxyStatus {
     pub running: bool,
     pub port: u16,
+}
+
+fn default_app_theme() -> String {
+    "system".to_string()
 }

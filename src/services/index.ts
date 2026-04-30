@@ -23,7 +23,7 @@ export {
   getConfig,
   updateProxyPort,
   updateLogSettings,
-  updateAdminKey,
+  updateAppTheme,
   getProxyStatus,
   restartProxy,
 } from './config';

@@ -8,7 +8,7 @@ export interface LogSettings {
 
 export interface AppConfig {
   proxy_port: number;
-  admin_key: string;
+  app_theme: string;
   services: ApiService[];
   access_points: AccessPoint[];
   log_settings: LogSettings;

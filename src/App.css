@@ -81,7 +81,7 @@ html, body, #root {
   align-items: center;
   justify-content: flex-end;
   padding: 0 24px;
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--semi-color-fill-0);
   border-top: 1px solid var(--semi-color-border);
   font-size: 12px;
   color: var(--semi-color-text-2);
@@ -97,9 +97,9 @@ html, body, #root {
 }
 
 .statusbar-dot-running {
-  background-color: #00b365;
+  background-color: var(--semi-color-success);
 }
 
 .statusbar-dot-stopped {
-  background-color: #fa2c2c;
+  background-color: var(--semi-color-danger);
 }

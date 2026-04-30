@@ -46,7 +46,7 @@ src-tauri/src/
 
 - **ApiService** - API 服务 (名称、Base URL、API Key)
 - **AccessPoint** - 接入点 (本地路径映射、关联服务、启用状态)
-- **AppConfig** - 应用配置 (代理端口、日志设置、管理密钥)
+- **AppConfig** - 应用配置 (代理端口、日志设置、主题设置)
 - **ProxyLog** - 代理日志 (请求元数据、时间戳、可选完整内容)
 
 #### 应用服务
@@ -64,6 +64,8 @@ src/
 ├── types/          # TypeScript 类型定义
 ├── services/       # Tauri IPC invoke 封装
 ├── components/     # 可复用组件 (Layout, Sidebar, StatusBar, TitleBar)
+├── hooks/          # 自定义 React Hooks
+├── utils/          # 工具函数 (主题切换、错误处理等)
 ├── pages/          # 页面组件
 │   ├── ServicesPage
 │   ├── AccessPointsPage
@@ -85,6 +87,7 @@ src/
 6. **单实例限制**: 使用 `tauri-plugin-single-instance` 限制应用多开，二次启动时聚焦已有窗口
 7. **系统托盘与窗口管理**: 托盘区右键菜单 (显示窗口/退出)，关闭窗口最小化到托盘而非退出
 8. **日志实时推送**: 代理服务器处理请求并写入日志后，通过 Tauri 事件机制主动推送新日志到前端，无需手动刷新
+9. **主题切换**: 支持明亮 (light)、暗黑 (dark)、跟随系统 (system) 三种主题模式，通过 Tauri window API 与 Semi Design 主题系统联动实现
 
 ## Tauri IPC 命令一览
 
@@ -96,7 +99,7 @@ src/
 | `create_access_point` / `update_access_point` / `delete_access_point` | 接入点 CRUD |
 | `toggle_access_point` | 启用/禁用接入点 |
 | `query_logs` / `get_log` / `clear_logs` | 日志查询和管理 |
-| `get_config` / `update_proxy_port` / `update_log_settings` / `update_admin_key` | 配置管理 |
+| `get_config` / `update_proxy_port` / `update_log_settings` / `update_app_theme` | 配置管理 |
 | `get_proxy_status` / `restart_proxy` | 代理状态管理 |
 
 ### Tauri Events
@@ -118,6 +121,7 @@ src/
 - **窗口关闭行为**: 关闭窗口时最小化到系统托盘，完全退出通过托盘菜单「退出」
 - **单实例方案**: 使用 `tauri-plugin-single-instance` 插件实现单实例限制，二次启动时聚焦已有窗口
 - **日志实时推送**: 使用 `tokio::sync::broadcast::channel` (256 容量) 而非 mpsc，支持未来多消费者扩展。独立 tokio task 消费 broadcast 并转发 Tauri 事件，与代理请求处理解耦。非阻塞发送 (`let _ = sender.send(...)`)，队列满时丢弃不阻塞代理请求
+- **主题切换**: 通过 Tauri 的 `window.theme()` 和 `window.setTheme()` API 控制窗口标题栏主题，同时在 `<body>` 上设置/移除 `theme-mode` 属性以驱动 Semi Design 组件主题。配置文件中存储 `app_theme` 字段 ("light" / "dark" / "system")，默认值为 "system"。选择 "system" 时通过 `onThemeChanged` 事件监听系统主题变化并自动同步
 
 ## 命令
 

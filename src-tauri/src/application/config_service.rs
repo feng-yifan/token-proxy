@@ -34,13 +34,6 @@ impl ConfigService {
         Ok(())
     }
 
-    pub async fn update_admin_key(&self, key: String) -> Result<(), String> {
-        let mut config = self.yaml_repo.read()?;
-        config.admin_key = key;
-        self.yaml_repo.write(&config)?;
-        Ok(())
-    }
-
     pub async fn update_log_settings(
         &self,
         max_log_entries: u32,
@@ -49,6 +42,13 @@ impl ConfigService {
         let mut config = self.yaml_repo.read()?;
         config.log_settings.max_log_entries = max_log_entries;
         config.log_settings.retention_days = retention_days;
+        self.yaml_repo.write(&config)?;
+        Ok(())
+    }
+
+    pub async fn update_app_theme(&self, theme: String) -> Result<(), String> {
+        let mut config = self.yaml_repo.read()?;
+        config.app_theme = theme;
         self.yaml_repo.write(&config)?;
         Ok(())
     }

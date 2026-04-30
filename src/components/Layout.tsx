@@ -31,7 +31,8 @@ export default function Layout() {
             width: 240,
             flexShrink: 0,
             borderRight: '1px solid var(--semi-color-border)',
-            overflow: 'auto',
+            overflowY: 'auto',
+            overflowX: 'hidden',
           }}
         >
           <Sidebar />

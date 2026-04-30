@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Card, InputNumber, Input, Button, Toast, Spin } from '@douyinfe/semi-ui';
+import { Card, InputNumber, Button, Toast, Spin, RadioGroup, Radio } from '@douyinfe/semi-ui';
 import {
   getConfig,
   updateProxyPort,
   updateLogSettings,
-  updateAdminKey,
+  updateAppTheme,
 } from '../services';
 import { useApiData } from '../hooks/useApiData';
 import { getErrorMessage } from '../utils/error';
+import { applyTheme } from '../utils/theme';
+import type { AppTheme } from '../utils/theme';
 import type { AppConfig } from '../types';
 
 export default function SettingsPage() {
@@ -18,19 +20,18 @@ export default function SettingsPage() {
   );
 
   const [proxyPort, setProxyPort] = useState(9876);
-  const [adminKey, setAdminKey] = useState('');
+  const [appTheme, setAppTheme] = useState<string>('system');
   const [maxLogEntries, setMaxLogEntries] = useState(10000);
   const [retentionDays, setRetentionDays] = useState(30);
 
   const [portSaving, setPortSaving] = useState(false);
-  const [keySaving, setKeySaving] = useState(false);
   const [logSaving, setLogSaving] = useState(false);
 
   // 配置加载完成后同步到本地 state
   useEffect(() => {
     if (config) {
       setProxyPort(config.proxy_port);
-      setAdminKey(config.admin_key);
+      setAppTheme(config.app_theme);
       setMaxLogEntries(config.log_settings.max_log_entries);
       setRetentionDays(config.log_settings.retention_days);
     }
@@ -48,19 +49,15 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveKey = async () => {
-    if (!adminKey) {
-      Toast.error('管理密钥不能为空');
-      return;
-    }
-    setKeySaving(true);
+  const handleThemeChange = async (theme: string) => {
+    setAppTheme(theme);
     try {
-      await updateAdminKey(adminKey);
-      Toast.success('管理密钥已更新');
+      await updateAppTheme(theme);
+      await applyTheme(theme as AppTheme);
+      Toast.success('主题已切换');
     } catch (error) {
-      Toast.error(`保存失败: ${getErrorMessage(error)}`);
-    } finally {
-      setKeySaving(false);
+      Toast.error(`切换失败: ${getErrorMessage(error)}`);
+      if (config) setAppTheme(config.app_theme);
     }
   };
 
@@ -112,26 +109,22 @@ export default function SettingsPage() {
         </Card>
 
         <Card
-          title="管理密钥"
+          title="样式设置"
           headerStyle={{ fontWeight: 600 }}
           style={{ width: '100%' }}
         >
           <div style={{ marginBottom: 12 }}>
-            <div style={{ marginBottom: 6, fontWeight: 500 }}>管理密钥</div>
-            <Input
-              mode="password"
-              value={adminKey}
-              onChange={(v) => setAdminKey(v)}
-              style={{ width: 300 }}
-            />
+            <div style={{ marginBottom: 6, fontWeight: 500 }}>主题模式</div>
+            <RadioGroup
+              type="button"
+              value={appTheme}
+              onChange={(e) => handleThemeChange(e.target.value)}
+            >
+              <Radio value="light">明亮模式</Radio>
+              <Radio value="dark">黑暗模式</Radio>
+              <Radio value="system">跟随系统</Radio>
+            </RadioGroup>
           </div>
-          <Button
-            type="primary"
-            onClick={handleSaveKey}
-            loading={keySaving}
-          >
-            保存密钥
-          </Button>
         </Card>
 
         <Card

@@ -288,7 +288,7 @@ pub fn run() {
             interface::commands::get_config,
             interface::commands::update_proxy_port,
             interface::commands::update_log_settings,
-            interface::commands::update_admin_key,
+            interface::commands::update_app_theme,
             interface::commands::get_proxy_status,
             interface::commands::restart_proxy,
         ])

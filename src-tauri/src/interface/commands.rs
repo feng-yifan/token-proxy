@@ -146,8 +146,8 @@ pub async fn update_log_settings(
 }
 
 #[tauri::command]
-pub async fn update_admin_key(state: State<'_, AppStateManaged>, key: String) -> Result<(), String> {
-    state.config_service.update_admin_key(key).await
+pub async fn update_app_theme(state: State<'_, AppStateManaged>, theme: String) -> Result<(), String> {
+    state.config_service.update_app_theme(theme).await
 }
 
 // ==================== Proxy 控制 ====================
