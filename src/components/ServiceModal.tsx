@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Modal, Form, Toast } from '@douyinfe/semi-ui';
 import { createService, updateService } from '../services';
+import { getErrorMessage } from '../utils/error';
 import type { ApiService } from '../types';
 
 interface ServiceModalProps {
@@ -42,7 +43,7 @@ export default function ServiceModal({
       onClose();
       onSuccess();
     } catch (error) {
-      Toast.error(`保存失败: ${error}`);
+      Toast.error(`保存失败: ${getErrorMessage(error)}`);
     } finally {
       setSubmitting(false);
     }

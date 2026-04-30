@@ -1,31 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Table, Button, Toast, Popconfirm } from '@douyinfe/semi-ui';
 import { IconPlus, IconEdit, IconDelete } from '@douyinfe/semi-icons';
 import { listServices, deleteService } from '../services';
+import { useApiData } from '../hooks/useApiData';
+import { getErrorMessage } from '../utils/error';
 import ServiceModal from '../components/ServiceModal';
 import type { ApiService } from '../types';
 
 export default function ServicesPage() {
-  const [services, setServices] = useState<ApiService[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { data: services, loading, fetchData } = useApiData<ApiService[]>(
+    listServices,
+    [],
+    '获取服务列表失败',
+  );
+
   const [modalVisible, setModalVisible] = useState(false);
   const [editingService, setEditingService] = useState<ApiService | null>(null);
-
-  const fetchServices = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await listServices();
-      setServices(data);
-    } catch (error) {
-      Toast.error(`获取服务列表失败: ${error}`);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchServices();
-  }, [fetchServices]);
 
   const handleAdd = () => {
     setEditingService(null);
@@ -41,14 +31,10 @@ export default function ServicesPage() {
     try {
       await deleteService(id);
       Toast.success('服务已删除');
-      fetchServices();
+      fetchData();
     } catch (error) {
-      Toast.error(`删除失败: ${error}`);
+      Toast.error(`删除失败: ${getErrorMessage(error)}`);
     }
-  };
-
-  const handleModalClose = () => {
-    setModalVisible(false);
   };
 
   const columns = [
@@ -106,18 +92,18 @@ export default function ServicesPage() {
 
       <Table
         columns={columns}
-        dataSource={services}
+        dataSource={services ?? []}
         rowKey="id"
         loading={loading}
-        pagination={{ pageSize: 10 }}
+        pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOpts: [10, 20, 50] }}
         empty="暂无服务数据"
       />
 
       <ServiceModal
         visible={modalVisible}
         editingService={editingService}
-        onClose={handleModalClose}
-        onSuccess={fetchServices}
+        onClose={() => setModalVisible(false)}
+        onSuccess={fetchData}
       />
     </div>
   );

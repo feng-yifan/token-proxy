@@ -1,16 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Card, InputNumber, Input, Button, Toast } from '@douyinfe/semi-ui';
+import { useState, useEffect } from 'react';
+import { Card, InputNumber, Input, Button, Toast, Spin } from '@douyinfe/semi-ui';
 import {
   getConfig,
   updateProxyPort,
   updateLogSettings,
   updateAdminKey,
 } from '../services';
+import { useApiData } from '../hooks/useApiData';
+import { getErrorMessage } from '../utils/error';
 import type { AppConfig } from '../types';
 
 export default function SettingsPage() {
-  const [config, setConfig] = useState<AppConfig | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { data: config, loading } = useApiData<AppConfig>(
+    getConfig,
+    [],
+    '获取配置失败',
+  );
 
   const [proxyPort, setProxyPort] = useState(9876);
   const [adminKey, setAdminKey] = useState('');
@@ -21,25 +26,15 @@ export default function SettingsPage() {
   const [keySaving, setKeySaving] = useState(false);
   const [logSaving, setLogSaving] = useState(false);
 
-  const fetchConfig = useCallback(async () => {
-    setLoading(true);
-    try {
-      const cfg = await getConfig();
-      setConfig(cfg);
-      setProxyPort(cfg.proxy_port);
-      setAdminKey(cfg.admin_key);
-      setMaxLogEntries(cfg.log_settings.max_log_entries);
-      setRetentionDays(cfg.log_settings.retention_days);
-    } catch (error) {
-      Toast.error(`获取配置失败: ${error}`);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  // 配置加载完成后同步到本地 state
   useEffect(() => {
-    fetchConfig();
-  }, [fetchConfig]);
+    if (config) {
+      setProxyPort(config.proxy_port);
+      setAdminKey(config.admin_key);
+      setMaxLogEntries(config.log_settings.max_log_entries);
+      setRetentionDays(config.log_settings.retention_days);
+    }
+  }, [config]);
 
   const handleSavePort = async () => {
     setPortSaving(true);
@@ -47,7 +42,7 @@ export default function SettingsPage() {
       await updateProxyPort(proxyPort);
       Toast.success('代理端口已更新');
     } catch (error) {
-      Toast.error(`保存失败: ${error}`);
+      Toast.error(`保存失败: ${getErrorMessage(error)}`);
     } finally {
       setPortSaving(false);
     }
@@ -63,7 +58,7 @@ export default function SettingsPage() {
       await updateAdminKey(adminKey);
       Toast.success('管理密钥已更新');
     } catch (error) {
-      Toast.error(`保存失败: ${error}`);
+      Toast.error(`保存失败: ${getErrorMessage(error)}`);
     } finally {
       setKeySaving(false);
     }
@@ -75,14 +70,14 @@ export default function SettingsPage() {
       await updateLogSettings(maxLogEntries, retentionDays);
       Toast.success('日志设置已更新');
     } catch (error) {
-      Toast.error(`保存失败: ${error}`);
+      Toast.error(`保存失败: ${getErrorMessage(error)}`);
     } finally {
       setLogSaving(false);
     }
   };
 
   if (loading && !config) {
-    return <div style={{ padding: 24 }}>加载中...</div>;
+    return <Spin tip="加载中..." style={{ display: 'flex', justifyContent: 'center', padding: 48 }} />;
   }
 
   return (

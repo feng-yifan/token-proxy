@@ -22,7 +22,6 @@ export default function Sidebar() {
 
   return (
     <Nav
-      defaultSelectedKeys={selectedKeys}
       selectedKeys={selectedKeys}
       onSelect={({ itemKey }) => navigate(`/${itemKey}`)}
       items={items}

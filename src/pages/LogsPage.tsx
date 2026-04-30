@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import {
   Table,
   Button,
@@ -11,6 +11,8 @@ import {
 } from '@douyinfe/semi-ui';
 import { IconRefresh, IconClear } from '@douyinfe/semi-icons';
 import { queryLogs, clearLogs, listAccessPoints } from '../services';
+import { useApiData } from '../hooks/useApiData';
+import { getErrorMessage } from '../utils/error';
 import type { ProxyLog, PaginatedLogs, AccessPoint } from '../types';
 
 function StatusCodeTag({ code }: { code: number }) {
@@ -24,47 +26,27 @@ function StatusCodeTag({ code }: { code: number }) {
 }
 
 export default function LogsPage() {
-  const [data, setData] = useState<PaginatedLogs | null>(null);
-  const [accessPoints, setAccessPoints] = useState<AccessPoint[]>([]);
-  const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(15);
+  const [pageSize, setPageSize] = useState(15);
   const [filterAccessPointId, setFilterAccessPointId] = useState<string | undefined>(undefined);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectedLog, setSelectedLog] = useState<ProxyLog | null>(null);
 
-  const fetchLogs = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await queryLogs({
-        page,
-        page_size: pageSize,
-        access_point_id: filterAccessPointId,
-      });
-      setData(result);
-    } catch (error) {
-      Toast.error(`获取日志失败: ${error}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, filterAccessPointId]);
+  const {
+    data: logData,
+    loading,
+    fetchData: fetchLogs,
+  } = useApiData<PaginatedLogs>(
+    () => queryLogs({ page, page_size: pageSize, access_point_id: filterAccessPointId }),
+    [page, pageSize, filterAccessPointId],
+    '获取日志失败',
+  );
 
-  const fetchAccessPoints = useCallback(async () => {
-    try {
-      const points = await listAccessPoints();
-      setAccessPoints(points);
-    } catch {
-      // 静默处理
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchAccessPoints();
-  }, [fetchAccessPoints]);
-
-  useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+  const { data: accessPoints } = useApiData<AccessPoint[]>(
+    listAccessPoints,
+    [],
+    '获取接入点失败',
+  );
 
   const handleClear = async () => {
     try {
@@ -73,12 +55,8 @@ export default function LogsPage() {
       setPage(1);
       fetchLogs();
     } catch (error) {
-      Toast.error(`清空失败: ${error}`);
+      Toast.error(`清空失败: ${getErrorMessage(error)}`);
     }
-  };
-
-  const handleRefresh = () => {
-    fetchLogs();
   };
 
   const handleRowClick = (record: ProxyLog) => {
@@ -86,7 +64,7 @@ export default function LogsPage() {
     setDrawerVisible(true);
   };
 
-  const apMap = new Map(accessPoints.map((ap) => [ap.id, ap.path]));
+  const apMap = new Map((accessPoints ?? []).map((ap) => [ap.id, ap.path]));
 
   const columns = [
     {
@@ -116,6 +94,12 @@ export default function LogsPage() {
     },
   ];
 
+  const detailStyle = {
+    label: { fontWeight: 600 as const, marginBottom: 4 },
+    value: { fontSize: 13, color: 'var(--semi-color-text-2)' as const },
+    section: { marginBottom: 16 },
+  };
+
   return (
     <div>
       <div
@@ -138,13 +122,13 @@ export default function LogsPage() {
             style={{ width: 200 }}
             showClear
           >
-            {accessPoints.map((ap) => (
+            {(accessPoints ?? []).map((ap) => (
               <Select.Option key={ap.id} value={ap.id}>
                 {ap.path}
               </Select.Option>
             ))}
           </Select>
-          <Button icon={<IconRefresh />} onClick={handleRefresh}>
+          <Button icon={<IconRefresh />} onClick={fetchLogs}>
             刷新
           </Button>
           <Popconfirm
@@ -162,14 +146,20 @@ export default function LogsPage() {
 
       <Table
         columns={columns}
-        dataSource={data?.logs ?? []}
+        dataSource={logData?.logs ?? []}
         rowKey="id"
         loading={loading}
         pagination={{
           currentPage: page,
           pageSize,
-          total: data?.total ?? 0,
+          total: logData?.total ?? 0,
+          showSizeChanger: true,
+          pageSizeOpts: [10, 15, 30, 50],
           onPageChange: (p: number) => setPage(p),
+          onPageSizeChange: (s: number) => {
+            setPageSize(s);
+            setPage(1);
+          },
         }}
         empty="暂无日志数据"
         onRow={(record) => ({
@@ -187,15 +177,13 @@ export default function LogsPage() {
       >
         {selectedLog && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>请求信息</div>
-              <div style={{ fontSize: 13, color: 'var(--semi-color-text-2)' }}>
+            <div style={detailStyle.section}>
+              <div style={detailStyle.label}>请求信息</div>
+              <div style={detailStyle.value}>
                 <div>方法: {selectedLog.method}</div>
                 <div>路径: {selectedLog.request_path}</div>
                 <div>状态码: {selectedLog.status_code}</div>
-                <div>
-                  延迟: {selectedLog.latency_ms} ms
-                </div>
+                <div>延迟: {selectedLog.latency_ms} ms</div>
                 <div>
                   时间:{' '}
                   {new Date(selectedLog.request_timestamp).toLocaleString(
@@ -206,29 +194,25 @@ export default function LogsPage() {
             </div>
 
             {selectedLog.request_body !== null && (
-              <div>
-                <div style={{ fontWeight: 600, marginBottom: 4 }}>
-                  请求体
-                </div>
+              <div style={detailStyle.section}>
+                <div style={detailStyle.label}>请求体</div>
                 <TextArea
                   value={selectedLog.request_body}
                   rows={6}
                   readonly
-                  style={{ width: '100%' }}
+                  style={{ width: '100%', fontFamily: 'monospace', fontSize: 12 }}
                 />
               </div>
             )}
 
             {selectedLog.response_body !== null && (
-              <div>
-                <div style={{ fontWeight: 600, marginBottom: 4 }}>
-                  响应体
-                </div>
+              <div style={detailStyle.section}>
+                <div style={detailStyle.label}>响应体</div>
                 <TextArea
                   value={selectedLog.response_body}
                   rows={6}
                   readonly
-                  style={{ width: '100%' }}
+                  style={{ width: '100%', fontFamily: 'monospace', fontSize: 12 }}
                 />
               </div>
             )}

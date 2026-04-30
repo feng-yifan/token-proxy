@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Table, Button, Switch, Toast, Popconfirm } from '@douyinfe/semi-ui';
 import { IconPlus, IconEdit, IconDelete } from '@douyinfe/semi-icons';
 import {
@@ -7,35 +7,26 @@ import {
   toggleAccessPoint,
   listServices,
 } from '../services';
+import { useApiData } from '../hooks/useApiData';
+import { getErrorMessage } from '../utils/error';
 import AccessPointModal from '../components/AccessPointModal';
 import type { AccessPoint, ApiService } from '../types';
 
 export default function AccessPointsPage() {
-  const [accessPoints, setAccessPoints] = useState<AccessPoint[]>([]);
-  const [services, setServices] = useState<ApiService[]>([]);
-  const [loading, setLoading] = useState(false);
+  const {
+    data: accessPoints,
+    loading: pointsLoading,
+    fetchData: fetchPoints,
+  } = useApiData<AccessPoint[]>(listAccessPoints, [], '获取接入点失败');
+
+  const { data: services } = useApiData<ApiService[]>(
+    listServices,
+    [],
+    '获取服务列表失败',
+  );
+
   const [modalVisible, setModalVisible] = useState(false);
   const [editingPoint, setEditingPoint] = useState<AccessPoint | null>(null);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [points, svcs] = await Promise.all([
-        listAccessPoints(),
-        listServices(),
-      ]);
-      setAccessPoints(points);
-      setServices(svcs);
-    } catch (error) {
-      Toast.error(`获取数据失败: ${error}`);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
   const handleAdd = () => {
     setEditingPoint(null);
@@ -51,26 +42,22 @@ export default function AccessPointsPage() {
     try {
       await deleteAccessPoint(id);
       Toast.success('接入点已删除');
-      fetchData();
+      fetchPoints();
     } catch (error) {
-      Toast.error(`删除失败: ${error}`);
+      Toast.error(`删除失败: ${getErrorMessage(error)}`);
     }
   };
 
   const handleToggle = async (id: string) => {
     try {
       await toggleAccessPoint(id);
-      fetchData();
+      fetchPoints();
     } catch (error) {
-      Toast.error(`切换失败: ${error}`);
+      Toast.error(`切换失败: ${getErrorMessage(error)}`);
     }
   };
 
-  const handleModalClose = () => {
-    setModalVisible(false);
-  };
-
-  const serviceMap = new Map(services.map((s) => [s.id, s.name]));
+  const serviceMap = new Map((services ?? []).map((s) => [s.id, s.name]));
 
   const columns = [
     { title: '路径', dataIndex: 'path', width: 250 },
@@ -144,19 +131,19 @@ export default function AccessPointsPage() {
 
       <Table
         columns={columns}
-        dataSource={accessPoints}
+        dataSource={accessPoints ?? []}
         rowKey="id"
-        loading={loading}
-        pagination={{ pageSize: 10 }}
+        loading={pointsLoading}
+        pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOpts: [10, 20, 50] }}
         empty="暂无接入点数据"
       />
 
       <AccessPointModal
         visible={modalVisible}
         editingPoint={editingPoint}
-        services={services}
-        onClose={handleModalClose}
-        onSuccess={fetchData}
+        services={services ?? []}
+        onClose={() => setModalVisible(false)}
+        onSuccess={fetchPoints}
       />
     </div>
   );
