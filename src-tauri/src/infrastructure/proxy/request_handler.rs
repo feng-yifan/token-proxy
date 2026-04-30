@@ -106,6 +106,7 @@ pub async fn handle_proxy_request(
             // 记录失败日志
             logger::log_request(
                 &state.db,
+                Some(&state.log_broadcast),
                 &access_point.id,
                 &path,
                 &method,
@@ -146,6 +147,7 @@ pub async fn handle_proxy_request(
     // 记录日志
     logger::log_request(
         &state.db,
+        Some(&state.log_broadcast),
         &access_point.id,
         &path,
         &method,

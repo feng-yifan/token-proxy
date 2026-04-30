@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use tokio::sync::RwLock;
 use notify::Watcher;
 use tauri::Manager;
+use tauri::Emitter;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
 use tauri::WindowEvent;
@@ -98,6 +99,20 @@ pub fn run() {
 
             let app_handle = app.handle().clone();
 
+            // ===== 日志实时推送通道 =====
+            let (log_tx, log_rx) = tokio::sync::broadcast::channel::<domain::proxy_log::ProxyLog>(256);
+
+            // 事件转发任务：broadcast receiver → Tauri event
+            let app_handle_clone = app_handle.clone();
+            tauri::async_runtime::spawn(async move {
+                let mut rx = log_rx;
+                while let Ok(log) = rx.recv().await {
+                    let _ = app_handle_clone.emit("proxy-log-new", &log);
+                }
+            });
+
+            let log_tx_for_state = log_tx.clone();
+
             // ===== 同步初始化（必须在 spawn 之前完成，否则 Tauri 命令无法找到托管状态）=====
 
             // 1. 解析配置目录
@@ -147,6 +162,7 @@ pub fn run() {
                 services: services.clone(),
                 access_points: access_points.clone(),
                 db: db.clone(),
+                log_broadcast: log_tx_for_state,
             };
 
             let proxy_service = Arc::new(ProxyService::new(

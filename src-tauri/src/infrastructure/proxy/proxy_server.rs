@@ -1,10 +1,11 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tokio::sync::broadcast;
 use tokio::net::TcpListener;
 use axum::{Router, body::Body, http::Request, routing::any};
 use tower_http::cors::CorsLayer;
 
-use crate::domain::{ApiService, AccessPoint};
+use crate::domain::{ApiService, AccessPoint, ProxyLog};
 use crate::infrastructure::persistence::sqlite_repository::SqliteRepository;
 use super::request_handler;
 
@@ -13,6 +14,7 @@ pub struct AppState {
     pub services: Arc<RwLock<Vec<ApiService>>>,
     pub access_points: Arc<RwLock<Vec<AccessPoint>>>,
     pub db: Arc<SqliteRepository>,
+    pub log_broadcast: broadcast::Sender<ProxyLog>,
 }
 
 pub struct ProxyServer {

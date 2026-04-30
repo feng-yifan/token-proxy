@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { listen } from '@tauri-apps/api/event';
 import {
   Table,
   Button,
@@ -8,6 +9,7 @@ import {
   Toast,
   Popconfirm,
   TextArea,
+  Banner,
 } from '@douyinfe/semi-ui';
 import { IconRefresh, IconClear } from '@douyinfe/semi-icons';
 import { queryLogs, clearLogs, listAccessPoints } from '../services';
@@ -36,11 +38,64 @@ export default function LogsPage() {
     data: logData,
     loading,
     fetchData: fetchLogs,
+    setData: setLogData,
   } = useApiData<PaginatedLogs>(
     () => queryLogs({ page, page_size: pageSize, access_point_id: filterAccessPointId }),
     [page, pageSize, filterAccessPointId],
     '获取日志失败',
   );
+
+  const [hasNewLogs, setHasNewLogs] = useState(false);
+  const [newLogCount, setNewLogCount] = useState(0);
+  const pageRef = useRef(page);
+  pageRef.current = page;
+
+  // 监听实时日志事件（仅注册一次）
+  useEffect(() => {
+    let cancelled = false;
+
+    const setupListener = async () => {
+      const unlisten = await listen<ProxyLog>('proxy-log-new', (event) => {
+        if (cancelled) return;
+        const newLog = event.payload;
+
+        if (pageRef.current === 1) {
+          // 在第一页：插入列表头部并截断到 pageSize，避免 dataSource 无限增长
+          setLogData((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              logs: [newLog, ...prev.logs].slice(0, prev.page_size),
+              total: prev.total + 1,
+            };
+          });
+        } else {
+          // 不在第一页：累积新日志计数
+          setNewLogCount((n) => n + 1);
+          setHasNewLogs(true);
+        }
+      });
+
+      if (cancelled) {
+        unlisten();
+        return;
+      }
+    };
+
+    setupListener();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setLogData]);
+
+  // 切换到第一页时清除新日志提示
+  useEffect(() => {
+    if (page === 1) {
+      setHasNewLogs(false);
+      setNewLogCount(0);
+    }
+  }, [page]);
 
   const { data: accessPoints } = useApiData<AccessPoint[]>(
     listAccessPoints,
@@ -102,6 +157,15 @@ export default function LogsPage() {
 
   return (
     <div>
+      {hasNewLogs && (
+        <Banner
+          type="info"
+          description={`收到 ${newLogCount} 条新日志`}
+          closeIcon={null}
+          style={{ marginBottom: 12 }}
+        />
+      )}
+
       <div
         style={{
           display: 'flex',

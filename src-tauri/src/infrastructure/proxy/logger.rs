@@ -1,12 +1,14 @@
 use std::sync::Arc;
 use chrono::Utc;
 use uuid::Uuid;
+use tokio::sync::broadcast;
 
 use crate::domain::ProxyLog;
 use crate::infrastructure::persistence::sqlite_repository::SqliteRepository;
 
 pub async fn log_request(
     db: &Arc<SqliteRepository>,
+    sender: Option<&broadcast::Sender<ProxyLog>>,
     access_point_id: &str,
     request_path: &str,
     method: &str,
@@ -42,6 +44,8 @@ pub async fn log_request(
 
     if let Err(e) = db.insert_log(&log_entry) {
         tracing::error!("记录日志失败: {}", e);
+    } else if let Some(sender) = sender {
+        let _ = sender.send(log_entry.clone());
     }
 }
 

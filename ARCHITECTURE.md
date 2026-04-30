@@ -238,6 +238,7 @@ API 服务的完整 CRUD 管理。
 - CORS: `CorsLayer::permissive()` 允许所有跨域请求
 - 优雅关闭: 通过 `tokio::sync::oneshot` channel 控制服务器生命周期
 - 绑定地址: `127.0.0.1:{port}` (默认 9876)
+- `AppState` 持有 `log_broadcast: broadcast::Sender<ProxyLog>` 字段，供 request_handler 在日志写入后广播实时事件
 
 #### request_handler
 
@@ -258,6 +259,7 @@ API 服务的完整 CRUD 管理。
 - 生成 UUID 作为日志 ID
 - 根据 `log_full_content` 配置决定是否记录完整请求/响应体
 - 内容体截断阈值: 10000 字符
+- 写入数据库成功后通过 `broadcast::Sender` 广播新日志，用于前端实时推送
 
 ### Interface 层
 
@@ -411,6 +413,32 @@ sequenceDiagram
     IPC-->>UI: 渲染 Table + Pagination
 ```
 
+### 5. 日志实时推送流程
+
+```mermaid
+sequenceDiagram
+    participant REQ as 代理请求处理
+    participant LOG as logger::log_request
+    participant DB as SqliteRepository
+    participant BC as broadcast::channel
+    participant TASK as 事件转发 Task
+    participant TAU as Tauri emit
+    participant UI as LogsPage
+
+    REQ->>LOG: log_request(db, sender, ...)
+    LOG->>DB: insert_log(&log_entry)
+    DB-->>LOG: Ok(())
+    LOG->>BC: sender.send(log_entry.clone())
+    BC-->>TASK: rx.recv().await
+    TASK->>TAU: app_handle.emit("proxy-log-new", &log)
+    TAU-->>UI: listen("proxy-log-new", handler)
+    alt UI 在第 1 页
+        UI->>UI: prepend 到列表头部，自动渲染
+    else UI 在其他页
+        UI->>UI: 显示 Banner 提示「收到 N 条新日志」
+    end
+```
+
 ## 初始化流程
 
 应用启动时序 (`lib.rs` `run()`):
@@ -468,6 +496,15 @@ sequenceDiagram
 
 使用 Tauri IPC (invoke) 而非 HTTP REST，这是桌面应用的原生通信方式，安全性更高、延迟更低。
 
+### 日志实时推送
+
+代理服务器写入日志后通过 Tauri 事件机制主动推送到前端，实现日志页面的实时更新，无需手动刷新。
+
+- **内部通道**：`tokio::sync::broadcast::channel<ProxyLog>(256)` — 多生产者多消费者，支持未来扩展其他消费者（如文件日志、WebSocket）
+- **事件转发**：独立 tokio task 消费 broadcast channel，通过 `app_handle.emit("proxy-log-new", &log)` 推送到前端
+- **非阻塞发送**：`let _ = sender.send()` 忽略错误，broadcast 队列满时丢弃新消息而不阻塞代理请求处理
+- **前端行为**：第 1 页自动 prepend 新日志到列表头部；其他页显示 Banner 提示，切换回第 1 页后自动清除
+
 ### 单实例限制策略
 
 使用 `tauri-plugin-single-instance` 官方插件实现单实例限制。二次启动时，插件回调自动将已有窗口 `unminimize` + `show` + `set_focus`，确保用户感知到正在运行的实例。此方案无需额外的 PID 文件或锁文件，与 Tauri 生命周期深度集成。
@@ -502,3 +539,4 @@ sequenceDiagram
 | 2026-04-28 | 初始架构文档创建 | 记录 DDD 四层架构、核心数据流和关键技术决策 |
 | 2026-04-29 | 补充单实例和系统托盘 | 新增单实例限制、系统托盘功能、ProxyService 状态追踪、隐藏到托盘关闭策略 |
 | 2026-04-29 | 自定义标题栏 | 替换原生标题栏为 TitleBar React 组件，支持最小化/最大化还原/关闭到托盘，data-tauri-drag-region 拖拽 |
+| 2026-04-30 | 日志实时推送 | 新增 broadcast 通道 + Tauri 事件推送机制，日志页面实时更新无需手动刷新 |
