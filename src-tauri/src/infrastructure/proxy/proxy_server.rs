@@ -36,7 +36,7 @@ impl ProxyServer {
         let addr = format!("127.0.0.1:{}", port);
 
         let app = Router::new()
-            .route("/{*path}", any(move |req: Request<Body>| {
+            .route("/*path", any(move |req: Request<Body>| {
                 let state = state.clone();
                 async move { request_handler::handle_proxy_request(state, req).await }
             }))

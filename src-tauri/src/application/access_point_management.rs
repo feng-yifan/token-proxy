@@ -4,6 +4,23 @@ use tokio::sync::RwLock;
 use crate::domain::{AccessPoint, ApiService, HeaderRule};
 use crate::infrastructure::persistence::yaml_config::YamlConfigRepository;
 
+/// 规范化路径：确保以 / 开头，去除尾部 /
+fn normalize_path(path: &str) -> String {
+    let trimmed = path.trim();
+    // 确保以 / 开头
+    let with_slash = if trimmed.starts_with('/') {
+        trimmed.to_string()
+    } else {
+        format!("/{}", trimmed)
+    };
+    // 去除尾部 / (保留根路径 "/")
+    if with_slash != "/" {
+        with_slash.trim_end_matches('/').to_string()
+    } else {
+        with_slash
+    }
+}
+
 pub struct AccessPointManagement {
     services: Arc<RwLock<Vec<ApiService>>>,
     access_points: Arc<RwLock<Vec<AccessPoint>>>,
@@ -44,6 +61,8 @@ impl AccessPointManagement {
         header_rules: Vec<HeaderRule>,
         log_full_content: bool,
     ) -> Result<AccessPoint, String> {
+        let path = normalize_path(&path);
+
         // 验证 service_id 存在
         {
             let services = self.services.read().await;
@@ -74,6 +93,8 @@ impl AccessPointManagement {
         header_rules: Vec<HeaderRule>,
         log_full_content: bool,
     ) -> Result<AccessPoint, String> {
+        let path = normalize_path(&path);
+
         // 验证 service_id 存在
         {
             let services = self.services.read().await;
