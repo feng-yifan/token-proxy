@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::domain::ApiService;
+use crate::domain::{ApiService, ApiType, ModelConfig};
 use crate::infrastructure::persistence::yaml_config::YamlConfigRepository;
 
 pub struct ServiceManagement {
@@ -42,8 +42,10 @@ impl ServiceManagement {
         name: String,
         base_url: String,
         api_key: String,
+        api_type: ApiType,
+        models: Vec<ModelConfig>,
     ) -> Result<ApiService, String> {
-        let service = ApiService::new(name, base_url, api_key);
+        let service = ApiService::new(name, base_url, api_key, api_type, models);
         self.services.write().await.push(service.clone());
         self.save_to_yaml().await?;
         Ok(service)
@@ -55,6 +57,8 @@ impl ServiceManagement {
         name: String,
         base_url: String,
         api_key: String,
+        api_type: ApiType,
+        models: Vec<ModelConfig>,
     ) -> Result<ApiService, String> {
         let mut services = self.services.write().await;
         let service = services
@@ -65,6 +69,8 @@ impl ServiceManagement {
         service.name = name;
         service.base_url = base_url;
         service.api_key = api_key;
+        service.api_type = api_type;
+        service.models = models;
         service.updated_at = chrono::Utc::now().to_rfc3339();
 
         let result = service.clone();

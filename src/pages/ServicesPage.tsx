@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Table, Button, Toast, Popconfirm } from '@douyinfe/semi-ui';
+import { Table, Button, Tag, Toast, Popconfirm } from '@douyinfe/semi-ui';
 import { IconPlus, IconEdit, IconDelete } from '@douyinfe/semi-icons';
 import { listServices, deleteService } from '../services';
 import { useApiData } from '../hooks/useApiData';
 import { getErrorMessage } from '../utils/error';
 import ServiceModal from '../components/ServiceModal';
-import type { ApiService } from '../types';
+import type { ApiService, ModelConfig } from '../types';
 
 export default function ServicesPage() {
   const { data: services, loading, fetchData } = useApiData<ApiService[]>(
@@ -38,8 +38,20 @@ export default function ServicesPage() {
   };
 
   const columns = [
-    { title: '名称', dataIndex: 'name', width: 200 },
-    { title: 'Base URL', dataIndex: 'base_url', width: 400 },
+    { title: '名称', dataIndex: 'name', width: 180 },
+    {
+      title: 'API 类型',
+      dataIndex: 'api_type',
+      width: 100,
+      render: (val: string) => <Tag color="blue" size="small">{val}</Tag>,
+    },
+    { title: 'Base URL', dataIndex: 'base_url', width: 300 },
+    {
+      title: '模型数',
+      dataIndex: 'models',
+      width: 80,
+      render: (models: ModelConfig[]) => models?.length ?? 0,
+    },
     {
       title: '创建时间',
       dataIndex: 'created_at',

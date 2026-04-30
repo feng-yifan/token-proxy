@@ -35,8 +35,12 @@ pub async fn create_service(
     name: String,
     base_url: String,
     api_key: String,
+    api_type: String,
+    models: Vec<ModelConfig>,
 ) -> Result<ApiService, String> {
-    state.service_mgmt.create_service(name, base_url, api_key).await
+    let api_type: ApiType = serde_json::from_str(&format!("\"{}\"", api_type))
+        .map_err(|e| format!("无效的 API 类型: {}", e))?;
+    state.service_mgmt.create_service(name, base_url, api_key, api_type, models).await
 }
 
 #[tauri::command]
@@ -46,8 +50,12 @@ pub async fn update_service(
     name: String,
     base_url: String,
     api_key: String,
+    api_type: String,
+    models: Vec<ModelConfig>,
 ) -> Result<ApiService, String> {
-    state.service_mgmt.update_service(&id, name, base_url, api_key).await
+    let api_type: ApiType = serde_json::from_str(&format!("\"{}\"", api_type))
+        .map_err(|e| format!("无效的 API 类型: {}", e))?;
+    state.service_mgmt.update_service(&id, name, base_url, api_key, api_type, models).await
 }
 
 #[tauri::command]

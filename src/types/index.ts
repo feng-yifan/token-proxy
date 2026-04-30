@@ -1,5 +1,6 @@
 export type {
   ApiService,
+  ModelConfig,
   CreateApiServiceRequest,
   UpdateApiServiceRequest,
 } from './api-service';
