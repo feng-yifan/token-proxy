@@ -30,7 +30,6 @@ export default function Layout() {
           style={{
             width: 240,
             flexShrink: 0,
-            borderRight: '1px solid var(--semi-color-border)',
             overflowY: 'auto',
             overflowX: 'hidden',
           }}
