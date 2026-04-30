@@ -54,10 +54,8 @@ pub fn run() {
                 .item(&quit_item)
                 .build()?;
 
-            let icon = app
-                .default_window_icon()
-                .cloned()
-                .expect("程序应在编译时嵌入默认图标");
+            let icon = tauri::image::Image::from_bytes(include_bytes!("../icons/icon.png"))
+                .expect("无法加载托盘图标");
 
             TrayIconBuilder::new()
                 .icon(icon)
