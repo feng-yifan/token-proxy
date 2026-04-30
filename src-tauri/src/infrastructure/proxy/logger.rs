@@ -14,19 +14,21 @@ pub async fn log_request(
     method: &str,
     status_code: u16,
     latency_ms: u64,
-    request_body: Option<&str>,
+    original_request_body: Option<&str>,
+    modified_request_body: Option<&str>,
     response_body: Option<&str>,
     log_full_content: bool,
 ) {
     let now = Utc::now().to_rfc3339();
 
-    let (req_body, resp_body) = if log_full_content {
+    let (orig_body, mod_body, resp_body) = if log_full_content {
         (
-            request_body.map(|s| truncate(s, 10000)),
+            original_request_body.map(|s| truncate(s, 10000)),
+            modified_request_body.map(|s| truncate(s, 10000)),
             response_body.map(|s| truncate(s, 10000)),
         )
     } else {
-        (None, None)
+        (None, None, None)
     };
 
     let log_entry = ProxyLog {
@@ -37,7 +39,8 @@ pub async fn log_request(
         status_code,
         latency_ms,
         request_timestamp: now.clone(),
-        request_body: req_body,
+        original_request_body: orig_body,
+        modified_request_body: mod_body,
         response_body: resp_body,
         created_at: now,
     };

@@ -257,11 +257,23 @@ export default function LogsPage() {
               </div>
             </div>
 
-            {selectedLog.request_body !== null && (
+            {selectedLog.original_request_body !== null && (
               <div style={detailStyle.section}>
-                <div style={detailStyle.label}>请求体</div>
+                <div style={detailStyle.label}>原始请求体</div>
                 <TextArea
-                  value={selectedLog.request_body}
+                  value={selectedLog.original_request_body}
+                  rows={6}
+                  readonly
+                  style={{ width: '100%', fontFamily: 'monospace', fontSize: 12 }}
+                />
+              </div>
+            )}
+
+            {selectedLog.modified_request_body !== null && (
+              <div style={detailStyle.section}>
+                <div style={detailStyle.label}>修改后请求体</div>
+                <TextArea
+                  value={selectedLog.modified_request_body}
                   rows={6}
                   readonly
                   style={{ width: '100%', fontFamily: 'monospace', fontSize: 12 }}

@@ -6,7 +6,8 @@ export interface ProxyLog {
   status_code: number;
   latency_ms: number;
   request_timestamp: string;
-  request_body: string | null;
+  original_request_body: string | null;
+  modified_request_body: string | null;
   response_body: string | null;
   created_at: string;
 }

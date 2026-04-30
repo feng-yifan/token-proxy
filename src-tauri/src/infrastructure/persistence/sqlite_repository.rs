@@ -21,7 +21,8 @@ impl SqliteRepository {
                 status_code INTEGER NOT NULL,
                 latency_ms INTEGER NOT NULL,
                 request_timestamp TEXT NOT NULL,
-                request_body TEXT,
+                original_request_body TEXT,
+                modified_request_body TEXT,
                 response_body TEXT,
                 created_at TEXT NOT NULL
             );
@@ -35,8 +36,8 @@ impl SqliteRepository {
     pub fn insert_log(&self, log: &ProxyLog) -> Result<(), String> {
         let conn = self.conn.lock().map_err(|e| format!("锁定数据库失败: {}", e))?;
         conn.execute(
-            "INSERT INTO proxy_logs (id, access_point_id, request_path, method, status_code, latency_ms, request_timestamp, request_body, response_body, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            "INSERT INTO proxy_logs (id, access_point_id, request_path, method, status_code, latency_ms, request_timestamp, original_request_body, modified_request_body, response_body, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![
                 log.id,
                 log.access_point_id,
@@ -45,7 +46,8 @@ impl SqliteRepository {
                 log.status_code,
                 log.latency_ms,
                 log.request_timestamp,
-                log.request_body,
+                log.original_request_body,
+                log.modified_request_body,
                 log.response_body,
                 log.created_at,
             ],
@@ -75,7 +77,7 @@ impl SqliteRepository {
 
         let logs = if let Some(ref ap_id) = access_point_id {
             let mut stmt = conn.prepare(
-                "SELECT id, access_point_id, request_path, method, status_code, latency_ms, request_timestamp, request_body, response_body, created_at
+                "SELECT id, access_point_id, request_path, method, status_code, latency_ms, request_timestamp, original_request_body, modified_request_body, response_body, created_at
                  FROM proxy_logs WHERE access_point_id = ?1
                  ORDER BY request_timestamp DESC LIMIT ?2 OFFSET ?3"
             ).map_err(|e| format!("准备查询失败: {}", e))?;
@@ -84,7 +86,7 @@ impl SqliteRepository {
             collect_rows(rows)?
         } else {
             let mut stmt = conn.prepare(
-                "SELECT id, access_point_id, request_path, method, status_code, latency_ms, request_timestamp, request_body, response_body, created_at
+                "SELECT id, access_point_id, request_path, method, status_code, latency_ms, request_timestamp, original_request_body, modified_request_body, response_body, created_at
                  FROM proxy_logs ORDER BY request_timestamp DESC LIMIT ?1 OFFSET ?2"
             ).map_err(|e| format!("准备查询失败: {}", e))?;
             let rows = stmt.query_map(params![page_size, offset], row_to_proxy_log)
@@ -98,7 +100,7 @@ impl SqliteRepository {
     pub fn get_log(&self, id: &str) -> Result<ProxyLog, String> {
         let conn = self.conn.lock().map_err(|e| format!("锁定数据库失败: {}", e))?;
         conn.query_row(
-            "SELECT id, access_point_id, request_path, method, status_code, latency_ms, request_timestamp, request_body, response_body, created_at
+            "SELECT id, access_point_id, request_path, method, status_code, latency_ms, request_timestamp, original_request_body, modified_request_body, response_body, created_at
              FROM proxy_logs WHERE id = ?1",
             params![id],
             row_to_proxy_log,
@@ -134,9 +136,10 @@ fn row_to_proxy_log(row: &rusqlite::Row) -> rusqlite::Result<ProxyLog> {
         status_code: row.get(4)?,
         latency_ms: row.get(5)?,
         request_timestamp: row.get(6)?,
-        request_body: row.get(7)?,
-        response_body: row.get(8)?,
-        created_at: row.get(9)?,
+        original_request_body: row.get(7)?,
+        modified_request_body: row.get(8)?,
+        response_body: row.get(9)?,
+        created_at: row.get(10)?,
     })
 }
 

@@ -9,7 +9,8 @@ pub struct ProxyLog {
     pub status_code: u16,
     pub latency_ms: u64,
     pub request_timestamp: String,
-    pub request_body: Option<String>,
+    pub original_request_body: Option<String>,
+    pub modified_request_body: Option<String>,
     pub response_body: Option<String>,
     pub created_at: String,
 }

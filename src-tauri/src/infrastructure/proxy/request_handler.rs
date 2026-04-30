@@ -8,7 +8,7 @@ use reqwest::Client;
 
 use super::proxy_server::AppState;
 use super::logger;
-use crate::domain::HeaderAction;
+use crate::domain::{ApiType, HeaderAction, ModelConfig};
 
 pub async fn handle_proxy_request(
     state: AppState,
@@ -60,7 +60,16 @@ pub async fn handle_proxy_request(
         }
     };
 
-    let request_body_str = String::from_utf8_lossy(&body_bytes).to_string();
+    let original_body_str = String::from_utf8_lossy(&body_bytes).to_string();
+
+    // 模型名称替换 (仅 Anthropic API 类型)
+    let modified_body = if service.api_type == ApiType::Anthropic && !body_bytes.is_empty() {
+        replace_model_name(&original_body_str, &service.models)
+    } else {
+        original_body_str.clone()
+    };
+
+    let modified_body_str = String::from_utf8_lossy(&modified_body.as_bytes()).to_string();
 
     // 构建转发请求
     let client = Client::new();
@@ -92,8 +101,8 @@ pub async fn handle_proxy_request(
         }
     }
 
-    if !body_bytes.is_empty() {
-        forward_req = forward_req.body(body_bytes.to_vec());
+    if !modified_body.is_empty() {
+        forward_req = forward_req.body(modified_body.clone());
     }
 
     // 发送请求
@@ -112,6 +121,7 @@ pub async fn handle_proxy_request(
                 &method,
                 502,
                 latency,
+                None,
                 None,
                 None,
                 access_point.log_full_content,
@@ -153,7 +163,8 @@ pub async fn handle_proxy_request(
         &method,
         status,
         latency,
-        Some(&request_body_str),
+        Some(&original_body_str),
+        Some(&modified_body_str),
         Some(&response_body_str),
         access_point.log_full_content,
     )
@@ -173,4 +184,28 @@ pub async fn handle_proxy_request(
                 .body(Body::from("构建响应失败"))
                 .unwrap()
         })
+}
+
+/// 替换请求体中的 model 字段。
+/// 遍历 models 配置，如果 model 值匹配某个别名，则替换为正式名称。
+/// 模型不在配置列表中时，透传不变。
+fn replace_model_name(body: &str, models: &[ModelConfig]) -> String {
+    let mut result = body.to_string();
+
+    for model_config in models {
+        for alias in &model_config.aliases {
+            // 匹配 "model": "alias_value" 的变体
+            let patterns = [
+                format!("\"model\": \"{}\"", alias),
+                format!("\"model\":\"{}\"", alias),
+            ];
+            for pattern in &patterns {
+                if result.contains(pattern.as_str()) {
+                    let replacement = format!("\"model\": \"{}\"", model_config.name);
+                    result = result.replace(pattern.as_str(), &replacement);
+                }
+            }
+        }
+    }
+    result
 }
