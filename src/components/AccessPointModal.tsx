@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Modal, Form, Select, Button, Toast, Input } from '@douyinfe/semi-ui';
 import { IconPlus, IconMinusCircle } from '@douyinfe/semi-icons';
 import { createAccessPoint, updateAccessPoint } from '../services';
@@ -58,13 +58,20 @@ export default function AccessPointModal({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const formRef = useRef<any>(null);
 
+  // 用 key 强制 Form 重新挂载，确保 initValues 每次打开都生效，消除 setTimeout hack
+  const formKey = useMemo(
+    () => editingPoint?.id ?? `new-${Date.now()}`,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [visible, editingPoint?.id],
+  );
+
   const fullPath = PATH_PREFIX + pathSuffix.replace(/^\/+/, '');
 
+  // Modal 打开时初始化状态（Form 通过 key 自行重新挂载，无需 setTimeout 设值）
   useEffect(() => {
     if (!visible) return;
     if (editingPoint) {
-      const suffix = extractSuffix(editingPoint.path);
-      setPathSuffix(suffix);
+      setPathSuffix(extractSuffix(editingPoint.path));
       setHeaderRules(
         editingPoint.header_rules.map((rule, index) => ({
           key: `${index}`,
@@ -73,27 +80,15 @@ export default function AccessPointModal({
           action: rule.action,
         })),
       );
-      // 延迟设置表单值，确保 formRef 已就绪
-      setTimeout(() => {
-        formRef.current?.setValues({
-          path_suffix: suffix,
-          service_id: editingPoint.service_id,
-          log_full_content: editingPoint.log_full_content,
-        });
-      }, 0);
     } else {
       setPathSuffix('');
       setHeaderRules([]);
-      setTimeout(() => {
-        formRef.current?.reset();
-      }, 0);
     }
   }, [visible, editingPoint]);
 
   const handleGeneratePath = useCallback(() => {
     const suffix = generateRandomSuffix();
     setPathSuffix(suffix);
-    formRef.current?.setValues({ path_suffix: suffix });
   }, []);
 
   const handleSubmit = async (values: Record<string, unknown>) => {
@@ -167,9 +162,12 @@ export default function AccessPointModal({
       onCancel={onClose}
       onOk={() => formRef.current?.submitForm()}
       confirmLoading={submitting}
+      okText={isEditing ? '更新' : '创建'}
+      cancelText="取消"
       width={640}
     >
       <Form
+        key={formKey}
         onSubmit={handleSubmit}
         getFormApi={(api) => {
           formRef.current = api;
@@ -177,44 +175,38 @@ export default function AccessPointModal({
         initValues={
           editingPoint
             ? {
-                path_suffix: extractSuffix(editingPoint.path),
                 service_id: editingPoint.service_id,
                 log_full_content: editingPoint.log_full_content,
               }
             : {
-                path_suffix: '',
                 service_id: '',
                 log_full_content: false,
               }
         }
       >
-        <Form.Input
-          field="path_suffix"
-          label="路径"
-          prefix={PATH_PREFIX}
-          placeholder="test 或 chat/completions"
-          onChange={(v) => setPathSuffix(v)}
-          rules={[{ required: true, message: '请输入路径后缀' }]}
-          addonAfter={
-            <Button
-              onClick={handleGeneratePath}
-              style={{ margin: '-5px -11px' }}
-            >
-              随机生成
-            </Button>
-          }
-        />
-        <div
-          style={{
-            color: 'var(--semi-color-text-2)',
-            fontSize: 12,
-            fontFamily: 'monospace',
-            marginBottom: 16,
-            marginTop: -8,
-          }}
-        >
-          完整路径: {fullPath || '(请输入后缀)'}
-        </div>
+        <Form.Slot label="路径">
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Input
+              prefix={PATH_PREFIX}
+              placeholder="test 或 chat/completions"
+              value={pathSuffix}
+              onChange={(v) => setPathSuffix(v)}
+              style={{ flex: 1 }}
+            />
+            <Button onClick={handleGeneratePath}>随机生成</Button>
+          </div>
+          <div
+            style={{
+              color: 'var(--semi-color-text-2)',
+              fontSize: 12,
+              fontFamily: 'monospace',
+              marginTop: 4,
+            }}
+          >
+            完整路径: {fullPath || '(请输入后缀)'}
+          </div>
+        </Form.Slot>
+
         <Form.Select
           field="service_id"
           label="关联服务"
@@ -228,72 +220,73 @@ export default function AccessPointModal({
             </Select.Option>
           ))}
         </Form.Select>
-        <Form.Switch field="log_full_content" label="记录完整内容" />
-      </Form>
 
-      <div style={{ marginTop: 16 }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 8,
-          }}
-        >
-          <label style={{ fontWeight: 500 }}>Header 规则</label>
+        <Form.Switch field="log_full_content" label="记录完整内容" />
+
+        <Form.Slot label="Header 规则">
+          {headerRules.length === 0 && (
+            <div
+              style={{
+                color: 'var(--semi-color-text-2)',
+                fontSize: 13,
+                marginBottom: 8,
+              }}
+            >
+              暂无规则
+            </div>
+          )}
+          {headerRules.map((rule) => (
+            <div
+              key={rule.key}
+              style={{
+                display: 'flex',
+                gap: 8,
+                marginBottom: 8,
+                alignItems: 'center',
+              }}
+            >
+              <Input
+                placeholder="Header 名称"
+                value={rule.header_name}
+                onChange={(v) =>
+                  updateHeaderRule(rule.key, 'header_name', v)
+                }
+                style={{ flex: 1 }}
+              />
+              <Input
+                placeholder="Header 值"
+                value={rule.header_value}
+                onChange={(v) =>
+                  updateHeaderRule(rule.key, 'header_value', v)
+                }
+                style={{ flex: 1 }}
+              />
+              <Select
+                value={rule.action}
+                onChange={(v) =>
+                  updateHeaderRule(rule.key, 'action', v as string)
+                }
+                style={{ width: 100 }}
+              >
+                {HEADER_ACTIONS.map((a) => (
+                  <Select.Option key={a.value} value={a.value}>
+                    {a.label}
+                  </Select.Option>
+                ))}
+              </Select>
+              <Button
+                icon={<IconMinusCircle />}
+                type="danger"
+                size="small"
+                onClick={() => removeHeaderRule(rule.key)}
+              />
+            </div>
+          ))}
           <Button size="small" icon={<IconPlus />} onClick={addHeaderRule}>
             添加规则
           </Button>
-        </div>
-        {headerRules.length === 0 && (
-          <div style={{ color: 'var(--semi-color-text-2)', fontSize: 13 }}>
-            暂无规则
-          </div>
-        )}
-        {headerRules.map((rule) => (
-          <div
-            key={rule.key}
-            style={{
-              display: 'flex',
-              gap: 8,
-              marginBottom: 8,
-              alignItems: 'center',
-            }}
-          >
-            <Input
-              placeholder="Header 名称"
-              value={rule.header_name}
-              onChange={(v) => updateHeaderRule(rule.key, 'header_name', v)}
-              style={{ flex: 1 }}
-            />
-            <Input
-              placeholder="Header 值"
-              value={rule.header_value}
-              onChange={(v) => updateHeaderRule(rule.key, 'header_value', v)}
-              style={{ flex: 1 }}
-            />
-            <Select
-              value={rule.action}
-              onChange={(v) =>
-                updateHeaderRule(rule.key, 'action', v as string)
-              }
-              style={{ width: 100 }}
-            >
-              {HEADER_ACTIONS.map((a) => (
-                <Select.Option key={a.value} value={a.value}>
-                  {a.label}
-                </Select.Option>
-              ))}
-            </Select>
-            <Button
-              icon={<IconMinusCircle />}
-              type="danger"
-              size="small"
-              onClick={() => removeHeaderRule(rule.key)}
-            />
-          </div>
-        ))}
-      </div>
+        </Form.Slot>
+      </Form>
     </Modal>
   );
 }
