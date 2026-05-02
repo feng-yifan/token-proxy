@@ -6,6 +6,8 @@ use uuid::Uuid;
 pub enum ApiType {
     #[serde(rename = "anthropic")]
     Anthropic,
+    #[serde(rename = "openai")]
+    Openai,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

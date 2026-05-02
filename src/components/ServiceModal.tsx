@@ -13,7 +13,8 @@ interface ServiceModalProps {
 }
 
 const API_TYPE_OPTIONS = [
-  { value: 'anthropic', label: 'Anthropic' },
+  { value: 'anthropic', label: 'Anthropic', disabled: false },
+  { value: 'openai', label: 'OpenAI', disabled: true },
 ];
 
 export default function ServiceModal({
@@ -121,13 +122,16 @@ export default function ServiceModal({
         />
 
         <Form.Slot label="API 类型">
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {API_TYPE_OPTIONS.map((opt) => (
               <Tag
                 key={opt.value}
                 color={apiType === opt.value ? 'blue' : 'grey'}
-                style={{ cursor: 'pointer' }}
-                onClick={() => setApiType(opt.value)}
+                style={{
+                  cursor: opt.disabled ? 'not-allowed' : 'pointer',
+                  opacity: opt.disabled ? 0.45 : 1,
+                }}
+                onClick={() => !opt.disabled && setApiType(opt.value)}
               >
                 {opt.label}
               </Tag>
