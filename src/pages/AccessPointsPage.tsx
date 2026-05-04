@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Table, Button, Switch, Toast, Popconfirm, Typography } from '@douyinfe/semi-ui';
-import { IconPlus, IconEdit, IconDelete, IconCopy } from '@douyinfe/semi-icons';
+import { Table, Button, Switch, Toast, Popconfirm, Typography, Select } from '@douyinfe/semi-ui';
+import { IconPlus, IconEdit, IconDelete, IconCopy, IconEyeOpened, IconEyeClosedSolid } from '@douyinfe/semi-icons';
 import {
   listAccessPoints,
   deleteAccessPoint,
   toggleAccessPoint,
+  switchAccessPointService,
   listServices,
 } from '../services';
 import { useApiData } from '../hooks/useApiData';
@@ -15,20 +16,23 @@ import type { AccessPoint, ApiService } from '../types';
 function ApiKeyCell({ apiKey }: { apiKey: string }) {
   const [visible, setVisible] = useState(false);
 
+  const hiddenLength = Math.max(0, apiKey.length - 8);
   const displayText = visible
     ? apiKey
-    : `${apiKey.substring(0, 5)}...${apiKey.substring(apiKey.length - 3)}`;
+    : apiKey.length <= 8
+      ? '*'.repeat(apiKey.length)
+      : apiKey.substring(0, 5) + '*'.repeat(hiddenLength) + apiKey.substring(apiKey.length - 3);
 
   return (
     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-      <span style={{ fontFamily: 'monospace', fontSize: 13 }}>{displayText}</span>
+      <span style={{ fontFamily: 'monospace' }}>{displayText}</span>
       <Button
+        icon={visible ? <IconEyeClosedSolid /> : <IconEyeOpened />}
         size="small"
         type="tertiary"
         onClick={() => setVisible(!visible)}
-      >
-        {visible ? '掩码' : '显示'}
-      </Button>
+        aria-label={visible ? '隐藏密钥' : '显示密钥'}
+      />
       <Button
         icon={<IconCopy />}
         size="small"
@@ -87,10 +91,20 @@ export default function AccessPointsPage() {
     }
   };
 
-  const serviceMap = new Map((services ?? []).map((s) => [s.id, s.name]));
+  const handleSwitchService = async (accessPointId: string, newServiceId: string) => {
+    try {
+      await switchAccessPointService(accessPointId, newServiceId);
+      Toast.success('服务已切换');
+      fetchPoints();
+    } catch (error) {
+      Toast.error(`切换失败: ${getErrorMessage(error)}`);
+    }
+  };
+
+  const serviceOptions = (services ?? []).map((s) => ({ label: s.name, value: s.id }));
 
   const columns = [
-    { title: '路径', dataIndex: 'path', width: 200 },
+    { title: '路径', dataIndex: 'path', width: 200, render: (val: string) => <span style={{ fontFamily: 'monospace' }}>{val}</span> },
     {
       title: '密钥',
       dataIndex: 'api_key',
@@ -100,8 +114,16 @@ export default function AccessPointsPage() {
     {
       title: '关联服务',
       dataIndex: 'service_id',
-      width: 200,
-      render: (id: string) => serviceMap.get(id) || id,
+      width: 220,
+      render: (id: string, record: AccessPoint) => (
+        <Select
+          value={id}
+          onChange={(value) => handleSwitchService(record.id, value as string)}
+          optionList={serviceOptions}
+          size="small"
+          style={{ width: 180 }}
+        />
+      ),
     },
     {
       title: '记录完整内容',

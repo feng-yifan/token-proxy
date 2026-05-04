@@ -292,6 +292,7 @@ pub fn run() {
             interface::commands::create_access_point,
             interface::commands::update_access_point,
             interface::commands::delete_access_point,
+            interface::commands::update_access_point_service,
             interface::commands::toggle_access_point,
             interface::commands::query_logs,
             interface::commands::get_log,

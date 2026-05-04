@@ -12,6 +12,7 @@ export {
   updateAccessPoint,
   deleteAccessPoint,
   toggleAccessPoint,
+  switchAccessPointService,
 } from './access-point';
 export {
   queryLogs,

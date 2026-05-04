@@ -138,6 +138,30 @@ impl AccessPointManagement {
         Ok(())
     }
 
+    pub async fn update_service_id(&self, id: &str, service_id: &str) -> Result<AccessPoint, String> {
+        // 验证 service_id 存在
+        {
+            let services = self.services.read().await;
+            if !services.iter().any(|s| s.id == service_id) {
+                return Err("关联的服务不存在".to_string());
+            }
+        }
+
+        let mut access_points = self.access_points.write().await;
+        let point = access_points
+            .iter_mut()
+            .find(|ap| ap.id == id)
+            .ok_or_else(|| "接入点不存在".to_string())?;
+
+        point.service_id = service_id.to_string();
+        point.updated_at = chrono::Utc::now().to_rfc3339();
+
+        let result = point.clone();
+        drop(access_points);
+        self.save_to_yaml().await?;
+        Ok(result)
+    }
+
     pub async fn toggle_access_point(&self, id: &str) -> Result<AccessPoint, String> {
         let mut access_points = self.access_points.write().await;
         let point = access_points

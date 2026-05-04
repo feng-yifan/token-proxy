@@ -106,6 +106,15 @@ pub async fn delete_access_point(state: State<'_, AppStateManaged>, id: String) 
 }
 
 #[tauri::command]
+pub async fn update_access_point_service(
+    state: State<'_, AppStateManaged>,
+    id: String,
+    service_id: String,
+) -> Result<AccessPoint, String> {
+    state.access_point_mgmt.update_service_id(&id, &service_id).await
+}
+
+#[tauri::command]
 pub async fn toggle_access_point(state: State<'_, AppStateManaged>, id: String) -> Result<AccessPoint, String> {
     state.access_point_mgmt.toggle_access_point(&id).await
 }

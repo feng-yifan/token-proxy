@@ -67,6 +67,21 @@ export async function deleteAccessPoint(id: string): Promise<void> {
   }
 }
 
+export async function switchAccessPointService(
+  id: string,
+  serviceId: string,
+): Promise<AccessPoint> {
+  try {
+    return await invoke<AccessPoint>('update_access_point_service', {
+      id,
+      serviceId,
+    });
+  } catch (error) {
+    console.error('Failed to switch access point service:', error);
+    throw error;
+  }
+}
+
 export async function toggleAccessPoint(id: string): Promise<AccessPoint> {
   try {
     return await invoke<AccessPoint>('toggle_access_point', { id });
