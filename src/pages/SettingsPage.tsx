@@ -101,11 +101,11 @@ export default function SettingsPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 600 }}>
         <Card
           title="代理设置"
-          headerStyle={{ fontWeight: 600 }}
+
           style={{ width: '100%' }}
         >
           <div style={{ marginBottom: 12 }}>
-            <div style={{ marginBottom: 6, fontWeight: 500 }}>代理端口</div>
+            <div style={{ marginBottom: 6 }}>代理端口</div>
             <InputNumber
               min={1024}
               max={65535}
@@ -125,11 +125,11 @@ export default function SettingsPage() {
 
         <Card
           title="样式设置"
-          headerStyle={{ fontWeight: 600 }}
+
           style={{ width: '100%' }}
         >
           <div style={{ marginBottom: 12 }}>
-            <div style={{ marginBottom: 6, fontWeight: 500 }}>主题模式</div>
+            <div style={{ marginBottom: 6 }}>主题模式</div>
             <RadioGroup
               type="button"
               value={appTheme}
@@ -144,13 +144,13 @@ export default function SettingsPage() {
 
         <Card
           title="启动设置"
-          headerStyle={{ fontWeight: 600 }}
+
           style={{ width: '100%' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <div style={{ fontWeight: 500, marginBottom: 4 }}>静默启动</div>
-              <div style={{ color: 'var(--semi-color-text-2)', fontSize: 13 }}>
+              <div style={{ marginBottom: 4 }}>静默启动</div>
+              <div style={{ color: 'var(--semi-color-text-2)' }}>
                 启用后，应用启动时自动最小化到系统托盘
               </div>
             </div>
@@ -163,11 +163,11 @@ export default function SettingsPage() {
 
         <Card
           title="日志设置"
-          headerStyle={{ fontWeight: 600 }}
+
           style={{ width: '100%' }}
         >
           <div style={{ marginBottom: 12 }}>
-            <div style={{ marginBottom: 6, fontWeight: 500 }}>最大日志条数</div>
+            <div style={{ marginBottom: 6 }}>最大日志条数</div>
             <InputNumber
               min={100}
               value={maxLogEntries}
@@ -176,7 +176,7 @@ export default function SettingsPage() {
             />
           </div>
           <div style={{ marginBottom: 12 }}>
-            <div style={{ marginBottom: 6, fontWeight: 500 }}>日志保留天数</div>
+            <div style={{ marginBottom: 6 }}>日志保留天数</div>
             <InputNumber
               min={1}
               value={retentionDays}

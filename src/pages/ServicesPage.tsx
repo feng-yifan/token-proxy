@@ -45,7 +45,7 @@ export default function ServicesPage() {
       width: 100,
       render: (val: string) => <Tag color="blue" size="small">{val}</Tag>,
     },
-    { title: 'Base URL', dataIndex: 'base_url', width: 300 },
+    { title: 'Base URL', dataIndex: 'base_url', width: 300, render: (val: string) => <span style={{ fontFamily: 'monospace' }}>{val}</span> },
     {
       title: '模型数',
       dataIndex: 'models',

@@ -129,7 +129,7 @@ export default function ServiceModal({
                 color={apiType === opt.value ? 'blue' : 'grey'}
                 style={{
                   cursor: opt.disabled ? 'not-allowed' : 'pointer',
-                  opacity: opt.disabled ? 0.45 : 1,
+                  opacity: opt.disabled ? 'var(--semi-opacity-disabled)' : 1,
                 }}
                 onClick={() => !opt.disabled && setApiType(opt.value)}
               >

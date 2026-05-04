@@ -214,14 +214,13 @@ export default function AccessPointModal({
               placeholder="test 或 chat/completions"
               value={pathSuffix}
               onChange={(v) => setPathSuffix(v)}
-              style={{ flex: 1 }}
+              style={{ flex: 1, fontFamily: 'monospace' }}
             />
             <Button onClick={handleGeneratePath}>随机生成</Button>
           </div>
           <div
             style={{
               color: 'var(--semi-color-text-2)',
-              fontSize: 12,
               fontFamily: 'monospace',
               marginTop: 4,
             }}
@@ -244,7 +243,6 @@ export default function AccessPointModal({
           <div
             style={{
               color: 'var(--semi-color-text-2)',
-              fontSize: 12,
               marginTop: 4,
             }}
           >
@@ -273,7 +271,6 @@ export default function AccessPointModal({
             <div
               style={{
                 color: 'var(--semi-color-text-2)',
-                fontSize: 13,
                 marginBottom: 8,
               }}
             >

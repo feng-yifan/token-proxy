@@ -151,8 +151,8 @@ export default function LogsPage() {
   ];
 
   const detailStyle = {
-    label: { fontWeight: 600 as const, marginBottom: 4 },
-    value: { fontSize: 13, color: 'var(--semi-color-text-2)' as const },
+    label: { marginBottom: 4 },
+    value: { color: 'var(--semi-color-text-2)' as const },
     section: { marginBottom: 16 },
   };
 
@@ -265,7 +265,7 @@ export default function LogsPage() {
                   value={selectedLog.original_request_body}
                   rows={6}
                   readonly
-                  style={{ width: '100%', fontFamily: 'monospace', fontSize: 12 }}
+                  style={{ width: '100%', fontFamily: 'monospace' }}
                 />
               </div>
             )}
@@ -277,7 +277,7 @@ export default function LogsPage() {
                   value={selectedLog.modified_request_body}
                   rows={6}
                   readonly
-                  style={{ width: '100%', fontFamily: 'monospace', fontSize: 12 }}
+                  style={{ width: '100%', fontFamily: 'monospace' }}
                 />
               </div>
             )}
@@ -289,7 +289,7 @@ export default function LogsPage() {
                   value={selectedLog.response_body}
                   rows={6}
                   readonly
-                  style={{ width: '100%', fontFamily: 'monospace', fontSize: 12 }}
+                  style={{ width: '100%', fontFamily: 'monospace' }}
                 />
               </div>
             )}
