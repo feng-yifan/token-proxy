@@ -52,7 +52,7 @@ src-tauri/src/
 #### 应用服务
 
 - **ServiceManagement** - API 服务 CRUD + 级联检查 (删除时检查关联接入点)
-- **AccessPointManagement** - 接入点 CRUD + 启用/禁用
+- **AccessPointManagement** - 接入点 CRUD + 快捷切换服务 + 启用/禁用
 - **ProxyService** - 启动/停止 Axum 代理服务器
 - **LogService** - 日志查询 + 定时过期清理
 - **ConfigService** - 配置读写 + 同步 YAML
@@ -80,7 +80,7 @@ src/
 ## 核心功能
 
 1. **API 服务注册**: 在管理后台注册第三方 AI API 服务 (名称、URL、API Key)
-2. **接入点管理**: 创建精确路径映射，将本地路径关联到已注册 API 服务
+2. **接入点管理**: 创建精确路径映射，将本地路径关联到已注册 API 服务，支持在列表中快速切换关联服务
 3. **透明代理**: 匹配接入点路径 -> 注入 API Key -> 透传到远程服务 (支持接入点级别客户端鉴权)
 4. **请求日志**: 记录代理转发元数据，可选完整请求/响应内容
 5. **配置热重载**: YAML 文件变更后通过 notify 自动加载
@@ -99,6 +99,7 @@ src/
 | `list_access_points` / `get_access_point` | 查询接入点列表/详情 |
 | `create_access_point` / `update_access_point` / `delete_access_point` | 接入点 CRUD |
 | `toggle_access_point` | 启用/禁用接入点 |
+| `update_access_point_service` | 快捷切换接入点关联的 API 服务 |
 | `query_logs` / `get_log` / `clear_logs` | 日志查询和管理 |
 | `get_config` / `update_proxy_port` / `update_log_settings` / `update_app_theme` / `update_start_minimized` | 配置管理 |
 | `get_proxy_status` / `restart_proxy` | 代理状态管理 |

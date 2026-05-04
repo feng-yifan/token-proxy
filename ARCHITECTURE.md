@@ -103,7 +103,7 @@ src-tauri/src/
 │       ├── request_handler.rs      # 请求处理转发
 │       └── logger.rs               # 日志记录
 └── interface/           # 接口层 — 外部通信入口
-    └── commands.rs      # 21 个 Tauri IPC 命令
+    └── commands.rs      # 22 个 Tauri IPC 命令
 ```
 
 ### Domain 层
@@ -182,6 +182,7 @@ API 服务的完整 CRUD 管理。
 - `create_access_point` — 创建接入点，验证 `service_id` 存在且 `path` 不重复
 - `update_access_point` — 更新接入点配置
 - `delete_access_point` — 删除接入点
+- `update_service_id` — 快捷切换关联服务，验证 `service_id` 存在后更新内存状态并写回 YAML
 - `toggle_access_point` — 启用/禁用切换
 
 #### ProxyService
@@ -289,7 +290,7 @@ AppStateManaged {
 }
 ```
 
-#### 21 个 Tauri IPC 命令
+#### 22 个 Tauri IPC 命令
 
 | 分组 | 命令 | 功能说明 |
 |------|------|----------|
@@ -302,6 +303,7 @@ AppStateManaged {
 | | `get_access_point` | 查询单个接入点详情 |
 | | `create_access_point` | 创建新接入点 |
 | | `update_access_point` | 更新接入点配置 |
+| | `update_access_point_service` | 快捷切换接入点关联服务 |
 | | `delete_access_point` | 删除接入点 |
 | | `toggle_access_point` | 启用/禁用接入点 |
 | 日志管理 | `query_logs` | 分页查询请求日志 |
@@ -328,7 +330,7 @@ src/
 │   └── config.ts          # AppConfig / LogSettings / ProxyStatus 接口 (含 start_minimized)
 ├── services/              # Tauri invoke 封装层
 │   ├── api-service.ts     # 5 个 Service IPC 封装
-│   ├── access-point.ts    # 6 个 AccessPoint IPC 封装
+│   ├── access-point.ts    # 7 个 AccessPoint IPC 封装 (含 switchAccessPointService)
 │   ├── proxy-log.ts       # 3 个 Log IPC 封装
 │   └── config.ts          # 7 个 Config/Proxy IPC 封装
 ├── hooks/                 # 自定义 React Hooks
@@ -518,7 +520,7 @@ sequenceDiagram
    2.12. 检测静默启动配置：若 `config.start_minimized == true`，
          在异步 spawn 中延迟 100ms 后调用 `window.hide()`
 3. on_window_event: 拦截 CloseRequested → window.hide() 隐藏到托盘
-4. invoke_handler 注册所有 IPC 命令 (21 个)
+4. invoke_handler 注册所有 IPC 命令 (22 个)
 ```
 
 ## 关键技术决策
@@ -605,3 +607,4 @@ sequenceDiagram
 | 2026-04-30 | 主题切换与移除管理密钥 | 新增 app_theme 配置字段，支持明亮/黑暗/跟随系统三种主题模式；移除未使用的 admin_key 字段及相关代码 |
 | 2026-05-04 | 接入点密钥与认证修复 | AccessPoint 新增 api_key 可选字段，用于客户端鉴权；修复远程认证头注入策略，根据 api_type 使用 x-api-key (Anthropic) 或 Authorization: Bearer (OpenAI) |
 | 2026-05-04 | 静默启动 | AppConfig 新增 start_minimized 字段、ConfigService 新增 update_start_minimized 方法、新增同名 IPC 命令；setup 中检测配置后异步延迟隐藏窗口；前端设置页新增启动设置开关 |
+| 2026-05-04 | 接入点服务快捷切换 | AccessPointManagement 新增 update_service_id 方法；commands.rs 新增 update_access_point_service IPC 命令；前端 AccessPointsPage 关联服务列改为 Select 下拉框快捷切换 |
