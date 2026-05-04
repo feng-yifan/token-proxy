@@ -160,6 +160,11 @@ pub async fn update_app_theme(state: State<'_, AppStateManaged>, theme: String) 
     state.config_service.update_app_theme(theme).await
 }
 
+#[tauri::command]
+pub async fn update_start_minimized(state: State<'_, AppStateManaged>, minimized: bool) -> Result<(), String> {
+    state.config_service.update_start_minimized(minimized).await
+}
+
 // ==================== Proxy 控制 ====================
 
 #[tauri::command]

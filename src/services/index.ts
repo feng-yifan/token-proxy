@@ -24,6 +24,7 @@ export {
   updateProxyPort,
   updateLogSettings,
   updateAppTheme,
+  updateStartMinimized,
   getProxyStatus,
   restartProxy,
 } from './config';

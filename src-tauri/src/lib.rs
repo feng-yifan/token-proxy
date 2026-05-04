@@ -190,6 +190,17 @@ pub fn run() {
             app_handle.manage(managed);
             tracing::info!("Token Proxy 状态已托管, 代理端口: {}", proxy_port);
 
+            // ===== 静默启动 =====
+            if config.start_minimized {
+                let app_handle_hide = app_handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                    if let Some(window) = app_handle_hide.get_webview_window("main") {
+                        let _ = window.hide();
+                    }
+                });
+            }
+
             // ===== 异步初始化（不阻塞 setup 返回）=====
 
             // 9. 启动代理服务器
@@ -289,6 +300,7 @@ pub fn run() {
             interface::commands::update_proxy_port,
             interface::commands::update_log_settings,
             interface::commands::update_app_theme,
+            interface::commands::update_start_minimized,
             interface::commands::get_proxy_status,
             interface::commands::restart_proxy,
         ])

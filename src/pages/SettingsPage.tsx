@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Card, InputNumber, Button, Toast, Spin, RadioGroup, Radio, Typography } from '@douyinfe/semi-ui';
+import { Card, InputNumber, Button, Toast, Spin, RadioGroup, Radio, Switch, Typography } from '@douyinfe/semi-ui';
 import {
   getConfig,
   updateProxyPort,
   updateLogSettings,
   updateAppTheme,
+  updateStartMinimized,
 } from '../services';
 import { useApiData } from '../hooks/useApiData';
 import { getErrorMessage } from '../utils/error';
@@ -24,6 +25,8 @@ export default function SettingsPage() {
   const [maxLogEntries, setMaxLogEntries] = useState(10000);
   const [retentionDays, setRetentionDays] = useState(30);
 
+  const [startMinimized, setStartMinimized] = useState(false);
+
   const [portSaving, setPortSaving] = useState(false);
   const [logSaving, setLogSaving] = useState(false);
 
@@ -34,6 +37,7 @@ export default function SettingsPage() {
       setAppTheme(config.app_theme);
       setMaxLogEntries(config.log_settings.max_log_entries);
       setRetentionDays(config.log_settings.retention_days);
+      setStartMinimized(config.start_minimized);
     }
   }, [config]);
 
@@ -58,6 +62,17 @@ export default function SettingsPage() {
     } catch (error) {
       Toast.error(`切换失败: ${getErrorMessage(error)}`);
       if (config) setAppTheme(config.app_theme);
+    }
+  };
+
+  const handleStartMinimizedChange = async (checked: boolean) => {
+    setStartMinimized(checked);
+    try {
+      await updateStartMinimized(checked);
+      Toast.success('静默启动设置已保存，下次启动时生效');
+    } catch (error) {
+      Toast.error(`保存失败: ${getErrorMessage(error)}`);
+      setStartMinimized(!checked);
     }
   };
 
@@ -124,6 +139,25 @@ export default function SettingsPage() {
               <Radio value="dark">黑暗模式</Radio>
               <Radio value="system">跟随系统</Radio>
             </RadioGroup>
+          </div>
+        </Card>
+
+        <Card
+          title="启动设置"
+          headerStyle={{ fontWeight: 600 }}
+          style={{ width: '100%' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontWeight: 500, marginBottom: 4 }}>静默启动</div>
+              <div style={{ color: 'var(--semi-color-text-2)', fontSize: 13 }}>
+                启用后，应用启动时自动最小化到系统托盘
+              </div>
+            </div>
+            <Switch
+              checked={startMinimized}
+              onChange={handleStartMinimizedChange}
+            />
           </div>
         </Card>
 

@@ -43,6 +43,15 @@ export async function updateAppTheme(theme: string): Promise<void> {
   }
 }
 
+export async function updateStartMinimized(minimized: boolean): Promise<void> {
+  try {
+    await invoke('update_start_minimized', { minimized });
+  } catch (error) {
+    console.error('Failed to update start minimized:', error);
+    throw error;
+  }
+}
+
 export async function getProxyStatus(): Promise<ProxyStatus> {
   try {
     return await invoke<ProxyStatus>('get_proxy_status');

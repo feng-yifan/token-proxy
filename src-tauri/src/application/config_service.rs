@@ -52,4 +52,11 @@ impl ConfigService {
         self.yaml_repo.write(&config)?;
         Ok(())
     }
+
+    pub async fn update_start_minimized(&self, minimized: bool) -> Result<(), String> {
+        let mut config = self.yaml_repo.read()?;
+        config.start_minimized = minimized;
+        self.yaml_repo.write(&config)?;
+        Ok(())
+    }
 }
