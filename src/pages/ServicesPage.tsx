@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Table, Button, Tag, Toast, Popconfirm } from '@douyinfe/semi-ui';
+import { Table, Button, Tag, Toast, Popconfirm, Typography } from '@douyinfe/semi-ui';
 import { IconPlus, IconEdit, IconDelete } from '@douyinfe/semi-icons';
 import { listServices, deleteService } from '../services';
 import { useApiData } from '../hooks/useApiData';
@@ -96,7 +96,7 @@ export default function ServicesPage() {
           marginBottom: 16,
         }}
       >
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>API 服务</h2>
+        <Typography.Title heading={4} style={{ margin: 0 }}>API 服务</Typography.Title>
         <Button icon={<IconPlus />} type="primary" onClick={handleAdd}>
           添加服务
         </Button>

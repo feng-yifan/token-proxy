@@ -10,6 +10,7 @@ import {
   Popconfirm,
   TextArea,
   Banner,
+  Typography,
 } from '@douyinfe/semi-ui';
 import { IconRefresh, IconClear } from '@douyinfe/semi-icons';
 import { queryLogs, clearLogs, listAccessPoints } from '../services';
@@ -174,7 +175,7 @@ export default function LogsPage() {
           marginBottom: 16,
         }}
       >
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>请求日志</h2>
+        <Typography.Title heading={4} style={{ margin: 0 }}>请求日志</Typography.Title>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <Select
             placeholder="全部接入点"

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, InputNumber, Button, Toast, Spin, RadioGroup, Radio } from '@douyinfe/semi-ui';
+import { Card, InputNumber, Button, Toast, Spin, RadioGroup, Radio, Typography } from '@douyinfe/semi-ui';
 import {
   getConfig,
   updateProxyPort,
@@ -79,9 +79,9 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <h2 style={{ margin: 0, marginBottom: 24, fontSize: 20, fontWeight: 600 }}>
+      <Typography.Title heading={4} style={{ margin: 0, marginBottom: 24 }}>
         设置
-      </h2>
+      </Typography.Title>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 600 }}>
         <Card
