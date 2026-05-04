@@ -7,6 +7,7 @@ import {
   toggleAccessPoint,
   switchAccessPointService,
   listServices,
+  getConfig,
 } from '../services';
 import { useApiData } from '../hooks/useApiData';
 import { getErrorMessage } from '../utils/error';
@@ -59,6 +60,8 @@ export default function AccessPointsPage() {
     '获取服务列表失败',
   );
 
+  const { data: config } = useApiData(getConfig, [], '获取配置失败');
+
   const [modalVisible, setModalVisible] = useState(false);
   const [editingPoint, setEditingPoint] = useState<AccessPoint | null>(null);
 
@@ -104,7 +107,21 @@ export default function AccessPointsPage() {
   const serviceOptions = (services ?? []).map((s) => ({ label: s.name, value: s.id }));
 
   const columns = [
-    { title: '路径', dataIndex: 'path', width: 200, render: (val: string) => <span style={{ fontFamily: 'monospace' }}>{val}</span> },
+    { title: '路径', dataIndex: 'path', width: 200, render: (val: string) => (
+      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+        <span style={{ fontFamily: 'monospace' }}>{val}</span>
+        <Button
+          icon={<IconCopy />}
+          size="small"
+          type="tertiary"
+          onClick={() => {
+            const port = config?.proxy_port ?? 9876;
+            navigator.clipboard.writeText(`http://localhost:${port}${val}`);
+            Toast.success('完整路径已复制');
+          }}
+        />
+      </div>
+    ) },
     {
       title: '密钥',
       dataIndex: 'api_key',
