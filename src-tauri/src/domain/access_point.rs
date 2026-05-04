@@ -23,6 +23,7 @@ pub struct AccessPoint {
     pub path: String,
     pub service_id: String,
     pub header_rules: Vec<HeaderRule>,
+    pub api_key: String,
     pub log_full_content: bool,
     pub enabled: bool,
     pub created_at: String,
@@ -34,6 +35,7 @@ impl AccessPoint {
         path: String,
         service_id: String,
         header_rules: Vec<HeaderRule>,
+        api_key: String,
         log_full_content: bool,
     ) -> Self {
         let now = Utc::now().to_rfc3339();
@@ -42,6 +44,7 @@ impl AccessPoint {
             path,
             service_id,
             header_rules,
+            api_key,
             log_full_content,
             enabled: true,
             created_at: now.clone(),

@@ -59,6 +59,7 @@ impl AccessPointManagement {
         path: String,
         service_id: String,
         header_rules: Vec<HeaderRule>,
+        api_key: String,
         log_full_content: bool,
     ) -> Result<AccessPoint, String> {
         let path = normalize_path(&path);
@@ -79,7 +80,7 @@ impl AccessPointManagement {
             }
         }
 
-        let access_point = AccessPoint::new(path, service_id, header_rules, log_full_content);
+        let access_point = AccessPoint::new(path, service_id, header_rules, api_key, log_full_content);
         self.access_points.write().await.push(access_point.clone());
         self.save_to_yaml().await?;
         Ok(access_point)
@@ -91,6 +92,7 @@ impl AccessPointManagement {
         path: String,
         service_id: String,
         header_rules: Vec<HeaderRule>,
+        api_key: String,
         log_full_content: bool,
     ) -> Result<AccessPoint, String> {
         let path = normalize_path(&path);
@@ -112,6 +114,7 @@ impl AccessPointManagement {
         point.path = path;
         point.service_id = service_id;
         point.header_rules = header_rules;
+        point.api_key = api_key;
         point.log_full_content = log_full_content;
         point.updated_at = chrono::Utc::now().to_rfc3339();
 

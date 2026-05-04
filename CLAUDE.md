@@ -45,7 +45,7 @@ src-tauri/src/
 #### 领域实体
 
 - **ApiService** - API 服务 (名称、Base URL、API Key)
-- **AccessPoint** - 接入点 (本地路径映射、关联服务、启用状态)
+- **AccessPoint** - 接入点 (本地路径映射、关联服务、启用状态、可选接入点密钥)
 - **AppConfig** - 应用配置 (代理端口、日志设置、主题设置)
 - **ProxyLog** - 代理日志 (请求元数据、时间戳、可选完整内容)
 
@@ -81,7 +81,7 @@ src/
 
 1. **API 服务注册**: 在管理后台注册第三方 AI API 服务 (名称、URL、API Key)
 2. **接入点管理**: 创建精确路径映射，将本地路径关联到已注册 API 服务
-3. **透明代理**: 匹配接入点路径 -> 注入 API Key -> 透传到远程服务
+3. **透明代理**: 匹配接入点路径 -> 注入 API Key -> 透传到远程服务 (支持接入点级别客户端鉴权)
 4. **请求日志**: 记录代理转发元数据，可选完整请求/响应内容
 5. **配置热重载**: YAML 文件变更后通过 notify 自动加载
 6. **单实例限制**: 使用 `tauri-plugin-single-instance` 限制应用多开，二次启动时聚焦已有窗口
@@ -114,7 +114,10 @@ src/
 - **接入点映射**: 精确路径匹配 (如 /v1/chat/completions)
 - **代理端口**: 默认 9876，管理后台可配置
 - **数据源关系**: YAML 为主配置源，SQLite 为运行时缓存，双向同步 + notify 热重载
+- **YAML 向后兼容**: 实体字段使用 `#[serde(default)]` 确保旧 YAML 配置自动兼容新版本字段
 - **管理后台鉴权**: 无需登录 (桌面应用 OS 级安全)
+- **接入点客户端鉴权**: 接入点支持可选 `api_key` 字段，设置后代理验证客户端请求中的认证头 (`Authorization: Bearer <api_key>`)，未携带或无效密钥的请求被拒绝
+- **上游认证头注入**: 根据关联 API 服务的 `api_type` 自动选择认证方式，Anthropic 使用 `x-api-key` + `anthropic-version`，OpenAI-Compatible 使用 `Authorization: Bearer`
 - **协议支持**: Anthropic Messages API + OpenAI-Compatible 格式
 - **配置目录**: OS 默认配置目录 (`dirs::config_dir()`)
 - **窗口装饰**: 使用自定义标题栏 (TitleBar) 替代系统原生标题栏，通过设置 `decorations: false` 启用无边框窗口。标题栏左侧显示应用名称，中部为拖拽区域，右侧提供最小化、最大化/还原、关闭按钮

@@ -11,6 +11,7 @@ export interface AccessPoint {
   path: string;
   service_id: string;
   header_rules: HeaderRule[];
+  api_key: string;
   log_full_content: boolean;
   enabled: boolean;
   created_at: string;
@@ -21,6 +22,7 @@ export interface CreateAccessPointRequest {
   path: string;
   service_id: string;
   header_rules: HeaderRule[];
+  api_key: string;
   log_full_content: boolean;
 }
 
@@ -29,5 +31,6 @@ export interface UpdateAccessPointRequest {
   path: string;
   service_id: string;
   header_rules: HeaderRule[];
+  api_key: string;
   log_full_content: boolean;
 }

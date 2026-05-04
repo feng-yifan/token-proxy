@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Table, Button, Switch, Toast, Popconfirm } from '@douyinfe/semi-ui';
-import { IconPlus, IconEdit, IconDelete } from '@douyinfe/semi-icons';
+import { Table, Button, Switch, Toast, Popconfirm, Typography } from '@douyinfe/semi-ui';
+import { IconPlus, IconEdit, IconDelete, IconCopy } from '@douyinfe/semi-icons';
 import {
   listAccessPoints,
   deleteAccessPoint,
@@ -11,6 +11,36 @@ import { useApiData } from '../hooks/useApiData';
 import { getErrorMessage } from '../utils/error';
 import AccessPointModal from '../components/AccessPointModal';
 import type { AccessPoint, ApiService } from '../types';
+
+function ApiKeyCell({ apiKey }: { apiKey: string }) {
+  const [visible, setVisible] = useState(false);
+
+  const displayText = visible
+    ? apiKey
+    : `${apiKey.substring(0, 5)}...${apiKey.substring(apiKey.length - 3)}`;
+
+  return (
+    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+      <span style={{ fontFamily: 'monospace', fontSize: 13 }}>{displayText}</span>
+      <Button
+        size="small"
+        type="tertiary"
+        onClick={() => setVisible(!visible)}
+      >
+        {visible ? '掩码' : '显示'}
+      </Button>
+      <Button
+        icon={<IconCopy />}
+        size="small"
+        type="tertiary"
+        onClick={() => {
+          navigator.clipboard.writeText(apiKey);
+          Toast.success('密钥已复制');
+        }}
+      />
+    </div>
+  );
+}
 
 export default function AccessPointsPage() {
   const {
@@ -60,7 +90,13 @@ export default function AccessPointsPage() {
   const serviceMap = new Map((services ?? []).map((s) => [s.id, s.name]));
 
   const columns = [
-    { title: '路径', dataIndex: 'path', width: 250 },
+    { title: '路径', dataIndex: 'path', width: 200 },
+    {
+      title: '密钥',
+      dataIndex: 'api_key',
+      width: 280,
+      render: (val: string) => <ApiKeyCell apiKey={val} />,
+    },
     {
       title: '关联服务',
       dataIndex: 'service_id',
@@ -123,7 +159,7 @@ export default function AccessPointsPage() {
           marginBottom: 16,
         }}
       >
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>接入点</h2>
+        <Typography.Title heading={4} style={{ margin: 0 }}>接入点</Typography.Title>
         <Button icon={<IconPlus />} type="primary" onClick={handleAdd}>
           添加接入点
         </Button>

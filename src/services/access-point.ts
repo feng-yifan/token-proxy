@@ -31,6 +31,7 @@ export async function createAccessPoint(
       path: data.path,
       serviceId: data.service_id,
       headerRules: data.header_rules,
+      apiKey: data.api_key,
       logFullContent: data.log_full_content,
     });
   } catch (error) {
@@ -48,6 +49,7 @@ export async function updateAccessPoint(
       path: data.path,
       serviceId: data.service_id,
       headerRules: data.header_rules,
+      apiKey: data.api_key,
       logFullContent: data.log_full_content,
     });
   } catch (error) {

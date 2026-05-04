@@ -60,6 +60,34 @@ pub async fn handle_proxy_request(
         }
     };
 
+    // 接入点客户端鉴权
+    {
+        let client_key = match service.api_type {
+            ApiType::Anthropic => {
+                parts.headers
+                    .get("x-api-key")
+                    .and_then(|v| v.to_str().ok())
+                    .map(|s| s.to_string())
+            }
+            ApiType::Openai => {
+                parts.headers
+                    .get("authorization")
+                    .and_then(|v| v.to_str().ok())
+                    .and_then(|v| v.strip_prefix("Bearer "))
+                    .map(|s| s.trim().to_string())
+            }
+        };
+
+        let is_valid = client_key.as_ref().map(|k| k == &access_point.api_key).unwrap_or(false);
+        if !is_valid {
+            return (
+                StatusCode::UNAUTHORIZED,
+                "无效的 API 密钥",
+            )
+                .into_response();
+        }
+    }
+
     let original_body_str = String::from_utf8_lossy(&body_bytes).to_string();
 
     // 模型名称替换 (仅 Anthropic API 类型)
@@ -86,8 +114,16 @@ pub async fn handle_proxy_request(
         }
     }
 
-    // 注入 API Key
-    forward_req = forward_req.header("Authorization", format!("Bearer {}", service.api_key));
+    // 根据 api_type 注入认证头
+    match service.api_type {
+        ApiType::Anthropic => {
+            forward_req = forward_req.header("x-api-key", &service.api_key);
+            forward_req = forward_req.header("anthropic-version", "2023-06-01");
+        }
+        ApiType::Openai => {
+            forward_req = forward_req.header("Authorization", format!("Bearer {}", service.api_key));
+        }
+    }
 
     // 应用自定义 Header 规则
     for rule in &access_point.header_rules {

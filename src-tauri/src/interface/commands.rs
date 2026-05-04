@@ -81,9 +81,10 @@ pub async fn create_access_point(
     path: String,
     service_id: String,
     header_rules: Vec<HeaderRule>,
+    api_key: String,
     log_full_content: bool,
 ) -> Result<AccessPoint, String> {
-    state.access_point_mgmt.create_access_point(path, service_id, header_rules, log_full_content).await
+    state.access_point_mgmt.create_access_point(path, service_id, header_rules, api_key, log_full_content).await
 }
 
 #[tauri::command]
@@ -93,9 +94,10 @@ pub async fn update_access_point(
     path: String,
     service_id: String,
     header_rules: Vec<HeaderRule>,
+    api_key: String,
     log_full_content: bool,
 ) -> Result<AccessPoint, String> {
-    state.access_point_mgmt.update_access_point(&id, path, service_id, header_rules, log_full_content).await
+    state.access_point_mgmt.update_access_point(&id, path, service_id, header_rules, api_key, log_full_content).await
 }
 
 #[tauri::command]

@@ -54,6 +54,7 @@ export default function AccessPointModal({
 }: AccessPointModalProps) {
   const [submitting, setSubmitting] = useState(false);
   const [pathSuffix, setPathSuffix] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [headerRules, setHeaderRules] = useState<HeaderRuleEntry[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const formRef = useRef<any>(null);
@@ -72,6 +73,7 @@ export default function AccessPointModal({
     if (!visible) return;
     if (editingPoint) {
       setPathSuffix(extractSuffix(editingPoint.path));
+      setApiKey(editingPoint.api_key);
       setHeaderRules(
         editingPoint.header_rules.map((rule, index) => ({
           key: `${index}`,
@@ -82,6 +84,7 @@ export default function AccessPointModal({
       );
     } else {
       setPathSuffix('');
+      setApiKey('');
       setHeaderRules([]);
     }
   }, [visible, editingPoint]);
@@ -91,7 +94,25 @@ export default function AccessPointModal({
     setPathSuffix(suffix);
   }, []);
 
+  const handleGenerateApiKey = useCallback(() => {
+    const hexChars = '0123456789abcdef';
+    let key = 'sk-';
+    for (let i = 0; i < 48; i++) {
+      key += hexChars.charAt(Math.floor(Math.random() * hexChars.length));
+    }
+    setApiKey(key);
+  }, []);
+
   const handleSubmit = async (values: Record<string, unknown>) => {
+    if (!pathSuffix.trim()) {
+      Toast.error('请输入路径');
+      return;
+    }
+    if (!apiKey.trim()) {
+      Toast.error('请输入密钥');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const rules: HeaderRule[] = headerRules.map((r) => ({
@@ -106,6 +127,7 @@ export default function AccessPointModal({
           path: fullPath,
           service_id: values.service_id as string,
           header_rules: rules,
+          api_key: apiKey.trim(),
           log_full_content: values.log_full_content as boolean,
         });
         Toast.success('接入点已更新');
@@ -114,6 +136,7 @@ export default function AccessPointModal({
           path: fullPath,
           service_id: values.service_id as string,
           header_rules: rules,
+          api_key: apiKey.trim(),
           log_full_content: values.log_full_content as boolean,
         });
         Toast.success('接入点已创建');
@@ -184,7 +207,7 @@ export default function AccessPointModal({
               }
         }
       >
-        <Form.Slot label="路径">
+        <Form.Slot label={{ text: '路径', required: true }}>
           <div style={{ display: 'flex', gap: 8 }}>
             <Input
               prefix={PATH_PREFIX}
@@ -204,6 +227,28 @@ export default function AccessPointModal({
             }}
           >
             完整路径: {fullPath || '(请输入后缀)'}
+          </div>
+        </Form.Slot>
+
+        <Form.Slot label={{ text: '密钥', required: true }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Input
+              placeholder="请输入密钥，格式：sk- + 48 位十六进制字符"
+              value={apiKey}
+              onChange={(v) => setApiKey(v)}
+              style={{ flex: 1 }}
+              mode="password"
+            />
+            <Button onClick={handleGenerateApiKey}>随机生成</Button>
+          </div>
+          <div
+            style={{
+              color: 'var(--semi-color-text-2)',
+              fontSize: 12,
+              marginTop: 4,
+            }}
+          >
+            客户端必须携带此密钥才能通过代理访问该接入点。格式：sk- + 48 位十六进制字符
           </div>
         </Form.Slot>
 
