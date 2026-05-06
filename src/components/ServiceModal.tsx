@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { Modal, Form, Button, Tag, TagInput, Input, Toast } from '@douyinfe/semi-ui';
+import { Modal, Form, Button, Input, Select, Toast } from '@douyinfe/semi-ui';
 import { IconPlus, IconMinus } from '@douyinfe/semi-icons';
 import { createService, updateService } from '../services';
 import { getErrorMessage } from '../utils/error';
+import { sanitizeInput } from '../utils/sanitize';
 import type { ApiService, ModelConfig } from '../types';
 
 interface ServiceModalProps {
@@ -28,54 +29,96 @@ export default function ServiceModal({
   const formRef = useRef<any>(null);
   const [apiType, setApiType] = useState('anthropic');
   const [models, setModels] = useState<ModelConfig[]>([]);
+  const [defaultModel, setDefaultModel] = useState('');
 
   // 编辑模式回填
   useEffect(() => {
     if (editingService) {
       setApiType(editingService.api_type);
       setModels(editingService.models);
+      setDefaultModel(editingService.default_model);
     } else {
       setApiType('anthropic');
       setModels([]);
+      setDefaultModel('');
     }
   }, [editingService, visible]);
 
   const addModel = () => {
-    setModels([...models, { name: '', aliases: [] }]);
+    setModels([...models, { name: '' }]);
+    // 自动将新模型设为默认模型
+    if (models.length === 0) {
+      setDefaultModel('');
+    }
   };
 
   const removeModel = (index: number) => {
+    if (models.length <= 1) {
+      Toast.error('至少需要保留一个模型');
+      return;
+    }
+    const removed = models[index];
     setModels(models.filter((_, i) => i !== index));
+    // 如果移除的是默认模型，重置默认模型
+    if (removed.name === defaultModel) {
+      setDefaultModel('');
+    }
   };
 
   const updateModelName = (index: number, name: string) => {
-    setModels(models.map((m, i) => (i === index ? { ...m, name } : m)));
-  };
-
-  const updateModelAliases = (index: number, aliases: string[]) => {
-    setModels(models.map((m, i) => (i === index ? { ...m, aliases } : m)));
+    const sanitized = sanitizeInput(name);
+    setModels(models.map((m, i) => (i === index ? { ...m, name: sanitized } : m)));
+    // 如果没有设置默认模型，自动设为第一个模型
+    if (!defaultModel && sanitized) {
+      setDefaultModel(sanitized);
+    }
   };
 
   const handleSubmit = async (values: Record<string, unknown>) => {
+    // 验证模型列表
+    const validModels = models.filter((m) => m.name.trim());
+    if (validModels.length === 0) {
+      Toast.error('请至少添加一个模型');
+      return;
+    }
+
+    // 验证默认模型
+    if (!defaultModel) {
+      Toast.error('请选择默认模型');
+      return;
+    }
+    if (!validModels.some((m) => m.name === defaultModel)) {
+      Toast.error('默认模型必须在模型列表中');
+      return;
+    }
+
     setSubmitting(true);
     try {
+      const sanitizedValues = {
+        name: sanitizeInput(values.name as string),
+        base_url: sanitizeInput(values.base_url as string),
+        api_key: sanitizeInput(values.api_key as string),
+      };
+
       if (editingService) {
         await updateService({
           id: editingService.id,
-          name: values.name as string,
-          base_url: values.base_url as string,
-          api_key: values.api_key as string,
+          name: sanitizedValues.name,
+          base_url: sanitizedValues.base_url,
+          api_key: sanitizedValues.api_key,
           api_type: apiType,
-          models,
+          models: validModels,
+          default_model: defaultModel,
         });
         Toast.success('服务已更新');
       } else {
         await createService({
-          name: values.name as string,
-          base_url: values.base_url as string,
-          api_key: values.api_key as string,
+          name: sanitizedValues.name,
+          base_url: sanitizedValues.base_url,
+          api_key: sanitizedValues.api_key,
           api_type: apiType,
-          models,
+          models: validModels,
+          default_model: defaultModel,
         });
         Toast.success('服务已创建');
       }
@@ -87,6 +130,12 @@ export default function ServiceModal({
       setSubmitting(false);
     }
   };
+
+  // 默认模型选项
+  const defaultModelOptions = models.map((m) => ({
+    value: m.name,
+    label: m.name,
+  }));
 
   return (
     <Modal
@@ -124,17 +173,14 @@ export default function ServiceModal({
         <Form.Slot label="API 类型">
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {API_TYPE_OPTIONS.map((opt) => (
-              <Tag
+              <Button
                 key={opt.value}
-                color={apiType === opt.value ? 'blue' : 'grey'}
-                style={{
-                  cursor: opt.disabled ? 'not-allowed' : 'pointer',
-                  opacity: opt.disabled ? 'var(--semi-opacity-disabled)' : 1,
-                }}
+                theme={apiType === opt.value ? 'solid' : 'light'}
+                disabled={opt.disabled}
                 onClick={() => !opt.disabled && setApiType(opt.value)}
               >
                 {opt.label}
-              </Tag>
+              </Button>
             ))}
           </div>
         </Form.Slot>
@@ -153,7 +199,22 @@ export default function ServiceModal({
           rules={[{ required: true, message: '请输入 API Key' }]}
         />
 
-        <Form.Slot label="模型配置">
+        <Form.Slot label={{ text: '默认模型', required: true }}>
+          <Select
+            placeholder="请选择默认模型"
+            value={defaultModel || undefined}
+            onChange={(v) => setDefaultModel(v as string)}
+            style={{ width: '100%' }}
+          >
+            {defaultModelOptions.map((opt) => (
+              <Select.Option key={opt.value} value={opt.value}>
+                {opt.label}
+              </Select.Option>
+            ))}
+          </Select>
+        </Form.Slot>
+
+        <Form.Slot label="模型列表">
           <div>
             {models.map((model, index) => (
               <div
@@ -162,26 +223,20 @@ export default function ServiceModal({
                   display: 'flex',
                   gap: 8,
                   marginBottom: 8,
-                  alignItems: 'flex-start',
+                  alignItems: 'center',
                 }}
               >
                 <Input
-                  placeholder="模型名称 (如 claude-sonnet-4)"
+                  placeholder="模型名称 (如 deepseek-v4-pro)"
                   value={model.name}
                   onChange={(v) => updateModelName(index, v)}
                   style={{ flex: 1 }}
                 />
-                <TagInput
-                  placeholder="别名 (回车添加)"
-                  value={model.aliases}
-                  onChange={(v) => updateModelAliases(index, v as string[])}
-                  style={{ flex: 1 }}
-                />
                 <Button
-                  type="danger"
+                  type="tertiary"
+                  size="small"
                   icon={<IconMinus />}
                   onClick={() => removeModel(index)}
-                  size="small"
                 />
               </div>
             ))}

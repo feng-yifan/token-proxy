@@ -37,10 +37,11 @@ pub async fn create_service(
     api_key: String,
     api_type: String,
     models: Vec<ModelConfig>,
+    default_model: String,
 ) -> Result<ApiService, String> {
     let api_type: ApiType = serde_json::from_str(&format!("\"{}\"", api_type))
         .map_err(|e| format!("无效的 API 类型: {}", e))?;
-    state.service_mgmt.create_service(name, base_url, api_key, api_type, models).await
+    state.service_mgmt.create_service(name, base_url, api_key, api_type, models, default_model).await
 }
 
 #[tauri::command]
@@ -52,10 +53,11 @@ pub async fn update_service(
     api_key: String,
     api_type: String,
     models: Vec<ModelConfig>,
+    default_model: String,
 ) -> Result<ApiService, String> {
     let api_type: ApiType = serde_json::from_str(&format!("\"{}\"", api_type))
         .map_err(|e| format!("无效的 API 类型: {}", e))?;
-    state.service_mgmt.update_service(&id, name, base_url, api_key, api_type, models).await
+    state.service_mgmt.update_service(&id, name, base_url, api_key, api_type, models, default_model).await
 }
 
 #[tauri::command]
@@ -79,12 +81,11 @@ pub async fn get_access_point(state: State<'_, AppStateManaged>, id: String) -> 
 pub async fn create_access_point(
     state: State<'_, AppStateManaged>,
     path: String,
-    service_id: String,
-    header_rules: Vec<HeaderRule>,
+    services: Vec<AccessPointService>,
     api_key: String,
     log_full_content: bool,
 ) -> Result<AccessPoint, String> {
-    state.access_point_mgmt.create_access_point(path, service_id, header_rules, api_key, log_full_content).await
+    state.access_point_mgmt.create_access_point(path, services, api_key, log_full_content).await
 }
 
 #[tauri::command]
@@ -92,12 +93,11 @@ pub async fn update_access_point(
     state: State<'_, AppStateManaged>,
     id: String,
     path: String,
-    service_id: String,
-    header_rules: Vec<HeaderRule>,
+    services: Vec<AccessPointService>,
     api_key: String,
     log_full_content: bool,
 ) -> Result<AccessPoint, String> {
-    state.access_point_mgmt.update_access_point(&id, path, service_id, header_rules, api_key, log_full_content).await
+    state.access_point_mgmt.update_access_point(&id, path, services, api_key, log_full_content).await
 }
 
 #[tauri::command]
@@ -106,12 +106,21 @@ pub async fn delete_access_point(state: State<'_, AppStateManaged>, id: String) 
 }
 
 #[tauri::command]
-pub async fn update_access_point_service(
+pub async fn switch_access_point_service(
     state: State<'_, AppStateManaged>,
     id: String,
     service_id: String,
 ) -> Result<AccessPoint, String> {
-    state.access_point_mgmt.update_service_id(&id, &service_id).await
+    state.access_point_mgmt.switch_service(&id, &service_id).await
+}
+
+#[tauri::command]
+pub async fn update_access_point_services(
+    state: State<'_, AppStateManaged>,
+    id: String,
+    services: Vec<AccessPointService>,
+) -> Result<AccessPoint, String> {
+    state.access_point_mgmt.update_services(&id, services).await
 }
 
 #[tauri::command]

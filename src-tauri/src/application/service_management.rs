@@ -3,6 +3,7 @@ use tokio::sync::RwLock;
 
 use crate::domain::{ApiService, ApiType, ModelConfig};
 use crate::infrastructure::persistence::yaml_config::YamlConfigRepository;
+use crate::infrastructure::sanitize::sanitize_input;
 
 pub struct ServiceManagement {
     services: Arc<RwLock<Vec<ApiService>>>,
@@ -44,8 +45,20 @@ impl ServiceManagement {
         api_key: String,
         api_type: ApiType,
         models: Vec<ModelConfig>,
+        default_model: String,
     ) -> Result<ApiService, String> {
-        let service = ApiService::new(name, base_url, api_key, api_type, models);
+        let name = sanitize_input(&name);
+        let base_url = sanitize_input(&base_url);
+        let api_key = sanitize_input(&api_key);
+
+        let default_model = if default_model.is_empty() {
+            // 若未指定默认模型且模型列表非空，使用第一个模型
+            models.first().map(|m| m.name.clone()).unwrap_or_default()
+        } else {
+            sanitize_input(&default_model)
+        };
+
+        let service = ApiService::new(name, base_url, api_key, api_type, models, default_model);
         self.services.write().await.push(service.clone());
         self.save_to_yaml().await?;
         Ok(service)
@@ -59,18 +72,30 @@ impl ServiceManagement {
         api_key: String,
         api_type: ApiType,
         models: Vec<ModelConfig>,
+        default_model: String,
     ) -> Result<ApiService, String> {
+        let name = sanitize_input(&name);
+        let base_url = sanitize_input(&base_url);
+        let api_key = sanitize_input(&api_key);
+
         let mut services = self.services.write().await;
         let service = services
             .iter_mut()
             .find(|s| s.id == id)
             .ok_or_else(|| "服务不存在".to_string())?;
 
+        let default_model = if default_model.is_empty() {
+            models.first().map(|m| m.name.clone()).unwrap_or_default()
+        } else {
+            sanitize_input(&default_model)
+        };
+
         service.name = name;
         service.base_url = base_url;
         service.api_key = api_key;
         service.api_type = api_type;
         service.models = models;
+        service.default_model = default_model;
         service.updated_at = chrono::Utc::now().to_rfc3339();
 
         let result = service.clone();
@@ -88,9 +113,13 @@ impl ServiceManagement {
             return Err("服务不存在".to_string());
         }
 
-        // 同时删除关联此服务的接入点
+        // 同时删除关联此服务的接入点配置
         let mut access_points = self.access_points.write().await;
-        access_points.retain(|ap| ap.service_id != id);
+        for ap in access_points.iter_mut() {
+            ap.services.retain(|s| s.service_id != id);
+        }
+        // 移除没有任何服务配置的接入点
+        access_points.retain(|ap| !ap.services.is_empty());
 
         drop(services);
         drop(access_points);

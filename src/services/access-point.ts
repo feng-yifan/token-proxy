@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import type {
   AccessPoint,
+  AccessPointService,
   CreateAccessPointRequest,
   UpdateAccessPointRequest,
 } from '../types';
@@ -29,8 +30,7 @@ export async function createAccessPoint(
   try {
     return await invoke<AccessPoint>('create_access_point', {
       path: data.path,
-      serviceId: data.service_id,
-      headerRules: data.header_rules,
+      services: data.services,
       apiKey: data.api_key,
       logFullContent: data.log_full_content,
     });
@@ -47,8 +47,7 @@ export async function updateAccessPoint(
     return await invoke<AccessPoint>('update_access_point', {
       id: data.id,
       path: data.path,
-      serviceId: data.service_id,
-      headerRules: data.header_rules,
+      services: data.services,
       apiKey: data.api_key,
       logFullContent: data.log_full_content,
     });
@@ -72,12 +71,27 @@ export async function switchAccessPointService(
   serviceId: string,
 ): Promise<AccessPoint> {
   try {
-    return await invoke<AccessPoint>('update_access_point_service', {
+    return await invoke<AccessPoint>('switch_access_point_service', {
       id,
       serviceId,
     });
   } catch (error) {
     console.error('Failed to switch access point service:', error);
+    throw error;
+  }
+}
+
+export async function updateAccessPointServices(
+  id: string,
+  services: AccessPointService[],
+): Promise<AccessPoint> {
+  try {
+    return await invoke<AccessPoint>('update_access_point_services', {
+      id,
+      services,
+    });
+  } catch (error) {
+    console.error('Failed to update access point services:', error);
     throw error;
   }
 }

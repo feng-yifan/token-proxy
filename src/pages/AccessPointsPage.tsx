@@ -104,7 +104,11 @@ export default function AccessPointsPage() {
     }
   };
 
-  const serviceOptions = (services ?? []).map((s) => ({ label: s.name, value: s.id }));
+  // 获取服务名称
+  const getServiceName = (serviceId: string) => {
+    const service = services?.find((s) => s.id === serviceId);
+    return service?.name || serviceId;
+  };
 
   const columns = [
     { title: '路径', dataIndex: 'path', width: 200, render: (val: string) => (
@@ -130,17 +134,25 @@ export default function AccessPointsPage() {
     },
     {
       title: '关联服务',
-      dataIndex: 'service_id',
-      width: 220,
-      render: (id: string, record: AccessPoint) => (
-        <Select
-          value={id}
-          onChange={(value) => handleSwitchService(record.id, value as string)}
-          optionList={serviceOptions}
-          size="small"
-          style={{ width: 180 }}
-        />
-      ),
+      dataIndex: 'services',
+      width: 280,
+      render: (services: AccessPoint['services'], record: AccessPoint) => {
+        const activeServiceId = services?.[0]?.service_id;
+        const serviceOptions = (services ?? []).map((s) => ({
+          label: `${getServiceName(s.service_id)} (${s.model_mappings.length} 规则)`,
+          value: s.service_id,
+        }));
+
+        return (
+          <Select
+            value={activeServiceId}
+            onChange={(value) => handleSwitchService(record.id, value as string)}
+            optionList={serviceOptions}
+            size="small"
+            style={{ width: 220 }}
+          />
+        );
+      },
     },
     {
       title: '记录完整内容',

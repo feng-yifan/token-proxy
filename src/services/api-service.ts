@@ -33,6 +33,7 @@ export async function createService(
       apiKey: data.api_key,
       apiType: data.api_type,
       models: data.models,
+      defaultModel: data.default_model,
     });
   } catch (error) {
     console.error('Failed to create service:', error);
@@ -51,6 +52,7 @@ export async function updateService(
       apiKey: data.api_key,
       apiType: data.api_type,
       models: data.models,
+      defaultModel: data.default_model,
     });
   } catch (error) {
     console.error('Failed to update service:', error);

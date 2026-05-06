@@ -53,6 +53,12 @@ export default function ServicesPage() {
       render: (models: ModelConfig[]) => models?.length ?? 0,
     },
     {
+      title: '默认模型',
+      dataIndex: 'default_model',
+      width: 200,
+      render: (val: string) => val || '-',
+    },
+    {
       title: '创建时间',
       dataIndex: 'created_at',
       width: 200,

@@ -8,7 +8,7 @@ use reqwest::Client;
 
 use super::proxy_server::AppState;
 use super::logger;
-use crate::domain::{ApiType, HeaderAction, ModelConfig};
+use crate::domain::{ApiType, ApiService, AccessPointService};
 
 pub async fn handle_proxy_request(
     state: AppState,
@@ -31,9 +31,21 @@ pub async fn handle_proxy_request(
         return (StatusCode::SERVICE_UNAVAILABLE, "接入点已禁用").into_response();
     }
 
+    // 获取当前激活的服务（列表第一个）
+    let active_service_config = match access_point.active_service() {
+        Some(s) => s.clone(),
+        None => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "接入点未配置任何服务",
+            )
+                .into_response();
+        }
+    };
+
     // 查找关联的 API 服务
     let services = state.services.read().await;
-    let service = match services.iter().find(|s| s.id == access_point.service_id) {
+    let service = match services.iter().find(|s| s.id == active_service_config.service_id) {
         Some(s) => s.clone(),
         None => {
             return (
@@ -90,9 +102,9 @@ pub async fn handle_proxy_request(
 
     let original_body_str = String::from_utf8_lossy(&body_bytes).to_string();
 
-    // 模型名称替换 (仅 Anthropic API 类型)
-    let modified_body = if service.api_type == ApiType::Anthropic && !body_bytes.is_empty() {
-        replace_model_name(&original_body_str, &service.models)
+    // 模型名称映射 (所有 API 类型)
+    let modified_body = if !body_bytes.is_empty() {
+        apply_model_mapping(&original_body_str, &active_service_config, &service)
     } else {
         original_body_str.clone()
     };
@@ -122,18 +134,6 @@ pub async fn handle_proxy_request(
         }
         ApiType::Openai => {
             forward_req = forward_req.header("Authorization", format!("Bearer {}", service.api_key));
-        }
-    }
-
-    // 应用自定义 Header 规则
-    for rule in &access_point.header_rules {
-        match rule.action {
-            HeaderAction::Set | HeaderAction::Override => {
-                forward_req = forward_req.header(&rule.header_name, &rule.header_value);
-            }
-            HeaderAction::Remove => {
-                // reqwest 不直接支持移除 header，我们通过不添加来实现
-            }
         }
     }
 
@@ -222,26 +222,72 @@ pub async fn handle_proxy_request(
         })
 }
 
-/// 替换请求体中的 model 字段。
-/// 遍历 models 配置，如果 model 值匹配某个别名，则替换为正式名称。
-/// 模型不在配置列表中时，透传不变。
-fn replace_model_name(body: &str, models: &[ModelConfig]) -> String {
-    let mut result = body.to_string();
+/// 从 JSON 请求体中提取 model 字段值。
+fn extract_model_name(body: &str) -> Option<String> {
+    let json: serde_json::Value = serde_json::from_str(body).ok()?;
+    json.get("model")?.as_str().map(|s| s.to_string())
+}
 
-    for model_config in models {
-        for alias in &model_config.aliases {
-            // 匹配 "model": "alias_value" 的变体
-            let patterns = [
-                format!("\"model\": \"{}\"", alias),
-                format!("\"model\":\"{}\"", alias),
-            ];
-            for pattern in &patterns {
-                if result.contains(pattern.as_str()) {
-                    let replacement = format!("\"model\": \"{}\"", model_config.name);
-                    result = result.replace(pattern.as_str(), &replacement);
-                }
+/// 替换 body 中的 model 值：from → to。
+fn replace_model_in_body(body: &str, from: &str, to: &str) -> String {
+    let patterns = [
+        format!("\"model\": \"{}\"", from),
+        format!("\"model\":\"{}\"", from),
+    ];
+    let replacement = format!("\"model\": \"{}\"", to);
+    let mut result = body.to_string();
+    for pattern in &patterns {
+        result = result.replace(pattern.as_str(), &replacement);
+    }
+    result
+}
+
+/// 特殊值：匹配所有未映射的模型
+const OTHER_MODELS: &str = "__other__";
+/// 特殊值：使用默认模型
+const DEFAULT_MODEL: &str = "__default__";
+
+/// 模型映射核心逻辑：
+/// 1. 从请求体提取 model 字段值
+/// 2. 检查接入点服务配置中的 model_mappings (精确 source → target)
+///    - source 为 "__other__" 时表示匹配所有未明确映射的模型
+///    - target 为 "__default__" 时表示使用关联服务的 default_model
+/// 3. 若模型已在 service.models 中 → 透传 (客户端直接发了上游模型名)
+/// 4. 否则用 service.default_model 替换 (最终回退)
+fn apply_model_mapping(
+    body: &str,
+    ap_service: &AccessPointService,
+    service: &ApiService,
+) -> String {
+    let model_name = match extract_model_name(body) {
+        Some(m) => m,
+        None => return body.to_string(),
+    };
+
+    // 步骤 1: 检查接入点服务配置的映射表
+    for mapping in &ap_service.model_mappings {
+        let source_matches = mapping.source == OTHER_MODELS || mapping.source == model_name;
+        if source_matches {
+            let target = if mapping.target == DEFAULT_MODEL {
+                &service.default_model
+            } else {
+                &mapping.target
+            };
+            if !target.is_empty() && target != &model_name {
+                return replace_model_in_body(body, &model_name, target);
             }
         }
     }
-    result
+
+    // 步骤 2: 检查模型是否已在服务模型列表中 (透传)
+    if service.models.iter().any(|m| m.name == model_name) {
+        return body.to_string();
+    }
+
+    // 步骤 3: 使用默认模型回退
+    if !service.default_model.is_empty() && service.default_model != model_name {
+        return replace_model_in_body(body, &model_name, &service.default_model);
+    }
+
+    body.to_string()
 }
