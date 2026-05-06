@@ -13,7 +13,6 @@ pub enum ApiType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelConfig {
     pub name: String,
-    pub aliases: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,6 +23,8 @@ pub struct ApiService {
     pub api_key: String,
     pub api_type: ApiType,
     pub models: Vec<ModelConfig>,
+    #[serde(default)]
+    pub default_model: String,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -35,6 +36,7 @@ impl ApiService {
         api_key: String,
         api_type: ApiType,
         models: Vec<ModelConfig>,
+        default_model: String,
     ) -> Self {
         let now = Utc::now().to_rfc3339();
         Self {
@@ -44,6 +46,7 @@ impl ApiService {
             api_key,
             api_type,
             models,
+            default_model,
             created_at: now.clone(),
             updated_at: now,
         }

@@ -1,6 +1,5 @@
 export interface ModelConfig {
   name: string;
-  aliases: string[];
 }
 
 export interface ApiService {
@@ -10,6 +9,7 @@ export interface ApiService {
   api_key: string;
   api_type: string;
   models: ModelConfig[];
+  default_model: string;
   created_at: string;
   updated_at: string;
 }
@@ -20,6 +20,7 @@ export interface CreateApiServiceRequest {
   api_key: string;
   api_type: string;
   models: ModelConfig[];
+  default_model: string;
 }
 
 export interface UpdateApiServiceRequest {
@@ -29,4 +30,5 @@ export interface UpdateApiServiceRequest {
   api_key: string;
   api_type: string;
   models: ModelConfig[];
+  default_model: string;
 }

@@ -1,16 +1,17 @@
-export type HeaderAction = 'set' | 'override' | 'remove';
+export interface ModelMapping {
+  source: string;
+  target: string;
+}
 
-export interface HeaderRule {
-  header_name: string;
-  header_value: string;
-  action: HeaderAction;
+export interface AccessPointService {
+  service_id: string;
+  model_mappings: ModelMapping[];
 }
 
 export interface AccessPoint {
   id: string;
   path: string;
-  service_id: string;
-  header_rules: HeaderRule[];
+  services: AccessPointService[];
   api_key: string;
   log_full_content: boolean;
   enabled: boolean;
@@ -20,8 +21,7 @@ export interface AccessPoint {
 
 export interface CreateAccessPointRequest {
   path: string;
-  service_id: string;
-  header_rules: HeaderRule[];
+  services: AccessPointService[];
   api_key: string;
   log_full_content: boolean;
 }
@@ -29,8 +29,7 @@ export interface CreateAccessPointRequest {
 export interface UpdateAccessPointRequest {
   id: string;
   path: string;
-  service_id: string;
-  header_rules: HeaderRule[];
+  services: AccessPointService[];
   api_key: string;
   log_full_content: boolean;
 }

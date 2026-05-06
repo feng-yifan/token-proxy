@@ -6,8 +6,8 @@ export type {
 } from './api-service';
 export type {
   AccessPoint,
-  HeaderRule,
-  HeaderAction,
+  AccessPointService,
+  ModelMapping,
   CreateAccessPointRequest,
   UpdateAccessPointRequest,
 } from './access-point';
